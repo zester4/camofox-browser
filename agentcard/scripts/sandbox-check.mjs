@@ -3,7 +3,8 @@
  * Live check against AgentCard. Run it with SANDBOX credentials first.
  *
  *   node agentcard/scripts/sandbox-check.mjs                       # core checks
- *   node agentcard/scripts/sandbox-check.mjs --user usr_...        # + purchase path for a linked user
+ *   node agentcard/scripts/sandbox-check.mjs --session vs_...       # + purchase path, user read from a linked session
+ *   node agentcard/scripts/sandbox-check.mjs --user usr_...         # + purchase path for an AgentCard user id
  *   node agentcard/scripts/sandbox-check.mjs --register-url https://your.app/agentcard/webhooks
  *
  * Reads AGENTCARD_CLIENT_ID, AGENTCARD_CLIENT_SECRET (and AGENTCARD_BASE_URL)
@@ -36,7 +37,8 @@ const flag = (name) => {
   const i = args.indexOf(name);
   return i >= 0 ? args[i + 1] ?? true : null;
 };
-const userId = flag('--user');
+const sessionArg = flag('--session');
+const userArg = flag('--user');
 const registerUrl = flag('--register-url');
 
 let failures = 0;
@@ -128,7 +130,25 @@ async function main() {
   }
 
   // 6. purchase path (needs a user who has linked a sandbox card)
-  if (userId && userId !== true) {
+  // The AgentCard user id is the one the vault link produced. Either pass it with --user,
+  // or pass the enrolment session id with --session and the script reads the id from it.
+  let userId = userArg && userArg !== true ? userArg : null;
+  if (sessionArg && sessionArg !== true) {
+    try {
+      const linked = await api.getVaultSession(sessionArg);
+      if (linked.status !== 'linked' || !linked.user_id) {
+        check('purchase path (session linked)', false, `session status=${linked.status}; open its link, use connect code 111111, store a card with a passkey first`);
+        userId = null;
+      } else {
+        userId = linked.user_id;
+        check('purchase path (session linked)', true, `user ${userId}`);
+      }
+    } catch (err) {
+      check('purchase path (session linked)', false, err.message);
+      userId = null;
+    }
+  }
+  if (userId) {
     try {
       const cards = await api.listVaultCards(userId);
       const cardId = cards?.data?.[0]?.id;
