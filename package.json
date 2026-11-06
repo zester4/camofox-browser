@@ -136,6 +136,7 @@
     "fetch-bin": "node lib/camoufox-download.js"
   },
   "dependencies": {
+    "@agent-cards/sdk": "0.24.1",
     "better-sqlite3": "13.0.1",
     "camoufox-js": "0.11.5",
     "express": "^5.2.1",

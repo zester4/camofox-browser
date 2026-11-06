@@ -19,18 +19,24 @@ import { createCheckout, DEFAULT_MAX_AMOUNT_CENTS } from './checkout.js';
 import { createWebhookHandler } from './webhooks.js';
 import { createHttpHandlers } from './http.js';
 import { loadConfig, requireCredentials, describeConfig } from './config.js';
-import { createSdkClient, attachBrowserCheckout } from './browser-checkout.js';
+import { createAccount } from './account.js';
+import { attachInterception, toRegistry } from './interception.js';
 
 /** Events this integration subscribes to when its endpoint is registered. */
 export const SUBSCRIBED_EVENTS = [
   'vault.session_linked',
   'vault.card_stored',
   'checkout_authorization.*',
+  'vault.payment_permission.updated',
 ];
 
+const REGISTRY_TTL_MS = 10 * 60 * 1000;
+
 const API_METHODS = [
-  'createVaultSession', 'getVaultSession', 'listVaultCards',
-  'createAuthorization', 'getAuthorization', 'cancelAuthorization',
+  'createVaultSession', 'getVaultSession', 'listVaultCards', 'sendVaultLink', 'disconnectUser',
+  'createPreparation', 'getPreparation', 'cancelPreparation',
+  'createAuthorization', 'getAuthorization', 'cancelAuthorization', 'reportOutcome',
+  'listRecognizers', 'putPreset', 'getPreset', 'listPresets', 'deletePreset', 'attachPreset',
   'createWebhookEndpoint', 'getWebhookSecret',
 ];
 
@@ -43,7 +49,6 @@ const API_METHODS = [
  *   fetchImpl?: typeof fetch,
  *   sleep?: (ms: number) => Promise<void>,
  *   maxAmountCents?: number | null,
- *   sdkLoader?: () => Promise<any>,
  * }} options
  */
 export function createAgentCardService(options) {
@@ -104,7 +109,19 @@ export function createAgentCardService(options) {
     return webhookHandler;
   }
 
-  let sdk = null;
+  const account = createAccount({ api: lazyApi, store, vault, log });
+
+  // The processor list changes rarely. Cache it briefly; a failed fetch is not cached.
+  let registryCache = null;
+  let registryAt = 0;
+  async function registry() {
+    if (registryCache && Date.now() - registryAt < REGISTRY_TTL_MS) return registryCache;
+    const raw = await getApi().listRecognizers({ modes: 'token' });
+    registryCache = toRegistry(Array.isArray(raw) ? raw : (raw?.data ?? []));
+    registryAt = Date.now();
+    return registryCache;
+  }
+
   return {
     config,
     describe: () => describeConfig(config),
@@ -113,24 +130,44 @@ export function createAgentCardService(options) {
     vault,
     checkout,
     webhooks,
-    handlers: createHttpHandlers({ vault, checkout, webhooks, log }),
+    handlers: createHttpHandlers({ vault, checkout, account, webhooks, log }),
 
     /** Register this app's webhook endpoint. Run once per environment; the secret is shown once. */
     registerWebhookEndpoint({ url, description }) {
       return getApi().createWebhookEndpoint({ url, enabledEvents: SUBSCRIBED_EVENTS, description });
     },
 
-    /** Browser checkout through @agent-cards/checkout, for pages driven by Camofox. */
-    async attachBrowserCheckout(page, purchase) {
-      const agentcardUserId = store.getAgentCardUser(purchase.userId);
-      if (!agentcardUserId) {
+    account,
+
+    /**
+     * Pay on a page (Camofox or any Playwright-style page): pauses the processor's
+     * card request, asks the user to approve, and fulfils it with AgentCard's response.
+     * See interception.js for the rules.
+     */
+    async attachPayment(page, purchase) {
+      if (!store.getAgentCardUser(purchase.userId)) {
         const err = new Error('This user has no card on file. Store a card first.');
         err.code = 'not_enrolled';
         throw err;
       }
       requireCredentials(config);
-      if (!sdk) sdk = await createSdkClient(config, { loadSdk: options.sdkLoader });
-      return attachBrowserCheckout(sdk, page, { ...purchase, agentcardUserId });
+      const served = await registry();
+      return attachInterception(page, {
+        checkout,
+        api: lazyApi,
+        registry: served,
+        userId: purchase.userId,
+        merchant: purchase.merchant,
+        amount: purchase.amount,
+        currency: purchase.currency,
+        checkoutOrigin: purchase.checkoutOrigin,
+        cardId: purchase.cardId,
+        onApprovalUrl: purchase.onApprovalUrl,
+        timeoutMs: purchase.timeoutMs,
+        log,
+        now: options.now,
+        sleep: options.sleep,
+      });
     },
 
     /** Flush durable state. Call on shutdown. */

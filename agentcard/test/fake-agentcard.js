@@ -22,6 +22,14 @@ export function createFakeAgentCard({ webhookSecret = 'whsec_test', tokenLifetim
     users: new Map(), // user_id -> { cards: [] }   (a vault exists once a session links)
     authorizations: new Map(), // id -> record
     endpoints: [],
+    preparations: new Map(), // id -> record
+    presets: new Map(), // name -> { name, rules, attachments: [] }
+    outcomes: new Map(), // authorization id -> [reports]
+    disconnected: new Set(),
+    recognizers: [
+      { psp: 'stripe', match: 'api\\.stripe\\.com/v1/tokens', hosts: ['^api\\.stripe\\.com$'], encoding: 'form', passthroughHeaders: [], request: { method: 'POST' } },
+      { psp: 'aci', match: 'secure\\.aci\\.example/v1/checkouts/[^/]+', hosts: ['^secure\\.aci\\.example$'], encoding: 'json', passthroughHeaders: [], request: { method: 'POST' }, preparationRequired: true },
+    ],
     requests: [], // { method, path, body }
     queued: [], // one-shot overrides
   };
@@ -140,6 +148,102 @@ export function createFakeAgentCard({ webhookSecret = 'whsec_test', tokenLifetim
       if (method === 'GET') return json(200, rec);
     }
 
+    if (method === 'GET' && path === '/api/v2/checkout/recognizers') {
+      return json(200, state.recognizers);
+    }
+
+    if (method === 'POST' && path === '/api/v2/checkout/preparations') {
+      for (const field of ['user', 'merchant', 'amount', 'currency', 'psp', 'merchant_origin', 'checkout_key']) {
+        if (body?.[field] === undefined || body?.[field] === null || body?.[field] === '') {
+          return json(400, { error: { code: 'invalid_request', message: `${field} is required` } });
+        }
+      }
+      const existing = [...state.preparations.values()].find((x) => x.checkout_key === body.checkout_key);
+      if (existing) return json(200, existing);
+      const id = `cprep_${++idSeq}`;
+      const record = {
+        id, object: 'checkout_preparation', status: 'awaiting_approval', user: body.user,
+        merchant: body.merchant, amount: body.amount, currency: body.currency, psp: body.psp,
+        merchant_origin: body.merchant_origin, card_id: body.card_id ?? null, checkout_key: body.checkout_key,
+        approvalUrl: `https://vault.agentcard.sh/authorize?id=${id}`, ready_expires_at: null, authorization_id: null,
+        payment_status: 'not_started',
+      };
+      state.preparations.set(id, record);
+      return json(201, record);
+    }
+
+    const prepMatch = path.match(/^\/api\/v2\/checkout\/preparations\/([^/]+)(\/cancel)?$/);
+    if (prepMatch) {
+      const rec = state.preparations.get(prepMatch[1]);
+      if (!rec) return json(404, { error: { code: 'not_found', message: 'No such preparation' } });
+      if (method === 'POST' && prepMatch[2]) {
+        if (rec.status === 'awaiting_approval') rec.status = 'cancelled';
+        return json(200, rec);
+      }
+      if (method === 'GET') return json(200, rec);
+    }
+
+    const outcomeMatch = path.match(/^\/api\/v2\/checkout\/authorizations\/([^/]+)\/outcome$/);
+    if (method === 'POST' && outcomeMatch) {
+      const rec = state.authorizations.get(outcomeMatch[1]);
+      if (!rec) return json(404, { error: { code: 'not_found', message: 'No such authorization' } });
+      const reports = state.outcomes.get(rec.id) ?? [];
+      if (rec.charged_kind !== 'none' || rec.status !== 'approved') {
+        return json(409, { error: { code: 'outcome_not_reportable', message: 'Not reportable' } });
+      }
+      reports.push(body);
+      state.outcomes.set(rec.id, reports);
+      return json(200, { object: 'checkout_outcome', id: rec.id, outcome: body.outcome, replayed: false });
+    }
+
+    if (method === 'POST' && path === '/api/v2/checkout/vault_link') {
+      if (!state.users.has(body?.user)) return json(404, { error: { code: 'not_found', message: 'User not connected' } });
+      return json(202, { object: 'vault_link', sent: true, user: body.user });
+    }
+
+    const disconnectMatch = path.match(/^\/api\/v2\/vault_users\/([^/]+)\/connection$/);
+    if (method === 'DELETE' && disconnectMatch) {
+      const userId = disconnectMatch[1];
+      if (!state.users.has(userId)) return json(404, { error: { code: 'connection_not_found', message: 'No connection' } });
+      state.users.delete(userId);
+      state.disconnected.add(userId);
+      return json(200, { object: 'vault_user_connection', user_id: userId, connected: false, revoked_tokens: 1, revoked_wallet_links: 0, revoked_sessions: 0, test_mode: true });
+    }
+
+    const presetMatch = path.match(/^\/api\/v2\/vault\/presets(?:\/([^/]+))?(\/attachments)?$/);
+    if (presetMatch) {
+      const name = presetMatch[1];
+      if (method === 'GET' && !name) return json(200, { object: 'list', data: [...state.presets.values()].map(presetView) });
+      if (method === 'PUT' && name && presetMatch[2]) {
+        const preset = state.presets.get(name);
+        if (!preset) return json(404, { error: { code: 'not_found', message: 'No such preset' } });
+        const owner = [...state.users.values()].find((u) => u.cards.some((c) => c.id === body?.target_id));
+        if (body?.kind !== 'card' || !owner) return json(404, { error: { code: 'card_not_found', message: 'Card not stored' } });
+        const card = owner.cards.find((c) => c.id === body.target_id);
+        if (!preset.attachments.some((a) => a.target_id === card.id)) preset.attachments.push({ kind: 'card', target_id: card.id, last4: card.last4 });
+        return json(200, presetView(preset));
+      }
+      if (name && !presetMatch[2]) {
+        if (method === 'PUT') {
+          const existing = state.presets.get(name);
+          const rules = body ?? {};
+          if (rules.per_day !== undefined && (typeof rules.per_day !== 'number' || rules.per_day <= 0)) {
+            return json(400, { error: { code: 'policy_invalid', message: 'per_day must be a positive number of dollars' } });
+          }
+          const preset = { name, rules, attachments: existing?.attachments ?? [] };
+          state.presets.set(name, preset);
+          return json(200, presetView(preset));
+        }
+        if (method === 'GET') {
+          const preset = state.presets.get(name);
+          return preset ? json(200, presetView(preset)) : json(404, { error: { code: 'not_found', message: 'No such preset' } });
+        }
+        if (method === 'DELETE') {
+          return state.presets.delete(name) ? json(200, { object: 'vault_preset_deleted', name }) : json(404, { error: { code: 'not_found', message: 'No such preset' } });
+        }
+      }
+    }
+
     if (method === 'POST' && path === '/api/v2/webhook_endpoints') {
       const endpoint = { id: `we_${++idSeq}`, object: 'webhook_endpoint', url: body.url, enabled_events: body.enabled_events, status: 'active', secret: webhookSecret };
       state.endpoints.push(endpoint);
@@ -184,11 +288,32 @@ export function createFakeAgentCard({ webhookSecret = 'whsec_test', tokenLifetim
       state.users.get(agentcardUserId).cards.push(card);
       return card;
     },
+    /** The outcome reports AgentCard has recorded for an authorization. */
+    outcomesFor(id) {
+      return state.outcomes.get(id) ?? [];
+    },
+    /** Set a preparation's status, as the user's approval does on AgentCard's side. */
+    setPreparation(id, patch) {
+      const rec = state.preparations.get(id);
+      if (rec) Object.assign(rec, patch);
+      return rec;
+    },
     setAuthorization(id, patch) {
       const rec = state.authorizations.get(id);
       if (rec) Object.assign(rec, patch);
       return rec;
     },
+  };
+}
+
+function presetView(p) {
+  return {
+    object: 'vault_preset',
+    name: p.name,
+    id: `pol_${p.name.slice(0, 12)}`,
+    version: 1,
+    summary: 'test rules',
+    attachments: p.attachments,
   };
 }
 

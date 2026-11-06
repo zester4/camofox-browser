@@ -175,6 +175,67 @@ export function createAgentCardApi({
       return request('POST', `/checkout/authorizations/${encodeURIComponent(id)}/cancel`, { body: {} });
     },
 
+    /** Read a checkout preparation (status: awaiting_approval, ready, bound, cancelled, expired). */
+    getPreparation(id) {
+      return request('GET', `/checkout/preparations/${encodeURIComponent(id)}`);
+    },
+
+    /** Cancel a preparation the user has not yet approved. Path follows the authorization pattern; confirm in sandbox. */
+    cancelPreparation(id) {
+      return request('POST', `/checkout/preparations/${encodeURIComponent(id)}/cancel`, { body: {} });
+    },
+
+    /**
+     * Report what a merchant did with an auto-approved purchase whose charge AgentCard
+     * did not see (charged_kind "none"). outcome: charged | declined | refunded.
+     */
+    reportOutcome(id, fields) {
+      return request('POST', `/checkout/authorizations/${encodeURIComponent(id)}/outcome`, { body: fields });
+    },
+
+    /** Processor request formats AgentCard can pause and complete for this company. */
+    listRecognizers({ modes, features, capabilities } = {}) {
+      const query = {};
+      if (modes) query.modes = modes;
+      if (features) query.features = features;
+      if (capabilities) query.capabilities = capabilities;
+      return request('GET', '/checkout/recognizers', { query });
+    },
+
+    /** AgentCard emails or texts the user a connected-session link on file. */
+    sendVaultLink(userId) {
+      return request('POST', '/checkout/vault_link', { body: { user: userId } });
+    },
+
+    /** Ends our connection to a user: tokens, pending links and sessions. Cards stay in their Vault. */
+    disconnectUser(userId) {
+      return request('DELETE', `/vault_users/${encodeURIComponent(userId)}/connection`);
+    },
+
+    /** Save a preset (spending and merchant rules). Re-saving replaces the rules and keeps attachments. */
+    putPreset(name, rules) {
+      return request('PUT', `/vault/presets/${encodeURIComponent(name)}`, { body: rules });
+    },
+
+    getPreset(name) {
+      return request('GET', `/vault/presets/${encodeURIComponent(name)}`);
+    },
+
+    listPresets() {
+      return request('GET', '/vault/presets');
+    },
+
+    deletePreset(name) {
+      return request('DELETE', `/vault/presets/${encodeURIComponent(name)}`);
+    },
+
+    /** Attach a preset to one stored card. The card is identified by its id alone. */
+    attachPreset(name, cardId) {
+      return request('PUT', `/vault/presets/${encodeURIComponent(name)}/attachments`, {
+        body: { kind: 'card', target_id: cardId },
+      });
+    },
+
     createWebhookEndpoint({ url, enabledEvents, description }) {
       const body = { url, enabled_events: enabledEvents };
       if (description) body.description = description;

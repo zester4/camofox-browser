@@ -79,6 +79,7 @@ RUN npm ci --omit=dev \
 COPY server.js ./
 COPY camofox.config.json ./
 COPY lib/ ./lib/
+COPY agentcard/ ./agentcard/
 # lib/cookies.js re-exports mcp/lib/cookies.mjs for persistence support.
 COPY mcp/ ./mcp/
 COPY plugins/ ./plugins/
