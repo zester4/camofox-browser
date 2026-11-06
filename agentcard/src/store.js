@@ -1,68 +1,89 @@
 /**
- * Storage for AgentCard state: user mappings, enrolment sessions, purchases,
- * the purchase event log, and webhook de-duplication.
+ * State for the AgentCard integration.
  *
- * Holds no card data. Card numbers never reach our servers; AgentCard holds
- * them, encrypted on the user's device.
+ * Holds: the mapping from this app's user ids to AgentCard user ids, enrolment
+ * sessions, purchases and their event log, and webhook de-duplication.
  *
- * This file defines the contract and an in-memory implementation. The Redis
- * standby (plan section 8) provides another implementation of the same
- * methods, so callers do not change.
+ * It never holds card numbers, card data or tokens. AgentCard keeps the card,
+ * encrypted on the user's device. Our records hold only display fields and ids.
+ *
+ * The store is in memory and calls `onChange` after every mutation. A durable
+ * implementation (see file-store.js) writes each change to disk. A Redis
+ * implementation (plan section 8) can use the same interface.
  */
+
+const CLOCK = () => new Date().toISOString();
 
 /**
- * @typedef {object} PurchaseRecord
- * @property {string} id                 checkout authorization id (cauth_...)
- * @property {string} userId             our user id
- * @property {string} merchant
- * @property {number|null} amount        smallest currency unit
- * @property {string|null} currency
- * @property {string} status             awaiting_approval | approved | submitted | declined | expired | refused | settled | not_settled
- * @property {object|null} settlement
- * @property {string} createdAt
- * @property {string} updatedAt
+ * @param {{ now?: () => string, seenLimit?: number, onChange?: () => void }} [options]
  */
-
-export function createMemoryStore({ now = () => new Date().toISOString(), seenLimit = 10_000 } = {}) {
-  /** @type {Map<string, string>} our userId -> AgentCard user id */
-  const userMap = new Map();
-  /** @type {Map<string, object>} vault session id -> { userId, status } */
-  const enrolments = new Map();
-  /** @type {Map<string, PurchaseRecord>} */
+export function createMemoryStore({ now = CLOCK, seenLimit = 10_000, onChange = () => {} } = {}) {
+  /** @type {Map<string, string>} our user id -> AgentCard user id */
+  const users = new Map();
+  /** @type {Map<string, object>} vault session id -> enrolment record */
+  const sessions = new Map();
+  /** @type {Map<string, object>} checkout authorization id -> purchase */
   const purchases = new Map();
-  /** @type {Map<string, Array<object>>} purchase id -> ordered events */
+  /** @type {Map<string, Array<object>>} purchase id -> event log */
   const purchaseEvents = new Map();
-  /** @type {Set<string>} webhook event ids already processed */
+  /** @type {Set<string>} processed webhook event ids, oldest first */
   const seenEvents = new Set();
+  /** @type {Map<string, object>} card id -> display record, from webhooks */
+  const cardEvents = new Map();
 
-  return {
-    // --- user mapping ---
+  const changed = () => onChange();
+
+  const store = {
+    // ---- user mapping ----
     getAgentCardUser(userId) {
-      return userMap.get(userId) ?? null;
+      return users.get(userId) ?? null;
+    },
+    /** Returns our user id that owns an AgentCard user id, if any. */
+    userForAgentCardUser(agentcardUserId) {
+      for (const [userId, value] of users) if (value === agentcardUserId) return userId;
+      return null;
     },
     setAgentCardUser(userId, agentcardUserId) {
-      userMap.set(userId, agentcardUserId);
+      users.set(userId, agentcardUserId);
+      changed();
+    },
+    listUsers() {
+      return [...users.entries()].map(([userId, agentcardUserId]) => ({ userId, agentcardUserId }));
     },
 
-    // --- enrolment sessions ---
-    putEnrolment(sessionId, record) {
-      enrolments.set(sessionId, { ...record, updatedAt: now() });
+    // ---- enrolment sessions ----
+    putSession(sessionId, record) {
+      sessions.set(sessionId, { ...record, sessionId, updatedAt: now() });
+      changed();
+      return { ...sessions.get(sessionId) };
     },
-    getEnrolment(sessionId) {
-      const found = enrolments.get(sessionId);
+    getSession(sessionId) {
+      const found = sessions.get(sessionId);
       return found ? { ...found } : null;
     },
-    updateEnrolment(sessionId, patch) {
-      const current = enrolments.get(sessionId);
+    updateSession(sessionId, patch) {
+      const current = sessions.get(sessionId);
       if (!current) return null;
       const next = { ...current, ...patch, updatedAt: now() };
-      enrolments.set(sessionId, next);
+      sessions.set(sessionId, next);
+      changed();
       return { ...next };
     },
+    /** The newest session for a user that is still pending and unexpired, if any. */
+    pendingSessionFor(userId, nowMs = Date.now()) {
+      let best = null;
+      for (const s of sessions.values()) {
+        if (s.userId !== userId || s.status !== 'pending') continue;
+        if (s.expiresAt && Date.parse(s.expiresAt) <= nowMs) continue;
+        if (!best || s.createdAt > best.createdAt) best = s;
+      }
+      return best ? { ...best } : null;
+    },
 
-    // --- purchases ---
+    // ---- purchases ----
     putPurchase(record) {
       purchases.set(record.id, { ...record });
+      changed();
       return { ...record };
     },
     getPurchase(id) {
@@ -74,6 +95,7 @@ export function createMemoryStore({ now = () => new Date().toISOString(), seenLi
       if (!current) return null;
       const next = { ...current, ...patch, updatedAt: now() };
       purchases.set(id, next);
+      changed();
       return { ...next };
     },
     listPurchases(userId) {
@@ -83,38 +105,74 @@ export function createMemoryStore({ now = () => new Date().toISOString(), seenLi
       const list = purchaseEvents.get(purchaseId) ?? [];
       list.push({ ...event, at: now() });
       purchaseEvents.set(purchaseId, list);
+      changed();
     },
     listPurchaseEvents(purchaseId) {
       return [...(purchaseEvents.get(purchaseId) ?? [])];
     },
 
-    // --- webhook de-duplication ---
-    /** Returns true the first time an event id is seen, false afterwards. */
+    // ---- card events (display fields only) ----
+    recordCardEvent(card) {
+      cardEvents.set(card.cardId, { ...card, at: now() });
+      changed();
+    },
+    listCardEvents() {
+      return [...cardEvents.values()].map((c) => ({ ...c }));
+    },
+
+    // ---- webhook de-duplication ----
+    /** True the first time an event id is seen. */
     markEventSeen(eventId) {
       if (seenEvents.has(eventId)) return false;
       seenEvents.add(eventId);
-      if (seenEvents.size > seenLimit) {
-        const oldest = seenEvents.values().next().value;
-        seenEvents.delete(oldest);
-      }
+      if (seenEvents.size > seenLimit) seenEvents.delete(seenEvents.values().next().value);
+      changed();
       return true;
     },
-
-    /** Release an event id after a failed handler, so the retry is processed. */
     unmarkEvent(eventId) {
       seenEvents.delete(eventId);
+      changed();
     },
 
-    /** Remove everything held for a user (matches DELETE /sessions/:userId). */
+    // ---- deletion (matches DELETE /sessions/:userId) ----
     forgetUser(userId) {
-      userMap.delete(userId);
-      for (const [id, s] of enrolments) if (s.userId === userId) enrolments.delete(id);
+      const agentcardUser = users.get(userId);
+      users.delete(userId);
+      for (const [id, s] of sessions) if (s.userId === userId) sessions.delete(id);
       for (const [id, p] of purchases) {
         if (p.userId === userId) {
           purchases.delete(id);
           purchaseEvents.delete(id);
         }
       }
+      changed();
+      return agentcardUser !== undefined;
+    },
+
+    // ---- persistence ----
+    /** Plain-object snapshot, safe to JSON-serialise. */
+    snapshot() {
+      return {
+        version: 1,
+        users: [...users.entries()],
+        sessions: [...sessions.entries()],
+        purchases: [...purchases.entries()],
+        purchaseEvents: [...purchaseEvents.entries()],
+        seenEvents: [...seenEvents],
+        cardEvents: [...cardEvents.entries()],
+      };
+    },
+    /** Replace all state from a snapshot without triggering onChange. */
+    restore(snapshot) {
+      if (!snapshot || snapshot.version !== 1) throw new Error('Unsupported AgentCard state snapshot');
+      users.clear(); sessions.clear(); purchases.clear(); purchaseEvents.clear(); seenEvents.clear(); cardEvents.clear();
+      for (const [k, v] of snapshot.users) users.set(k, v);
+      for (const [k, v] of snapshot.sessions) sessions.set(k, v);
+      for (const [k, v] of snapshot.purchases) purchases.set(k, v);
+      for (const [k, v] of snapshot.purchaseEvents) purchaseEvents.set(k, v);
+      for (const id of snapshot.seenEvents) seenEvents.add(id);
+      for (const [k, v] of snapshot.cardEvents ?? []) cardEvents.set(k, v);
     },
   };
+  return store;
 }

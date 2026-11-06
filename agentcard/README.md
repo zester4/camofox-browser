@@ -1,134 +1,163 @@
 # AgentCard integration
 
 Payments for agents running on Camofox. Each user gets a browser and a payment
-system together (plan sections 0 and 5). The user saves their own card once, on
-AgentCard's page. The agent works through checkout and reaches the payment step.
-Each purchase needs the user's approval on their own device. The agent never sees
-the card number.
+system together (plan sections 0 and 5). The user stores their own card once, on
+AgentCard's page. The card number never reaches this app or the model. Each
+purchase needs the user's approval on their own device with their passkey.
 
-**Status:** the core is built and tested offline (43 tests, including real HTTP).
-It has not run against live AgentCard yet. Mounting the routes in Camofox is a
-separate, reviewed step (see "Mounting" below).
+**Status:** built, wired into `server.js`, and tested offline (79 tests, including
+real HTTP and a restart). It has not yet run against live AgentCard. The live step
+needs sandbox credentials and a human to complete the passkey enrolment.
 
-## What is built
+## Routes
 
-| Module | What it does |
+All user routes sit behind the app's access-key middleware. The backend names the
+user with `userId` (in the body or the query). The webhook is the one exception:
+AgentCard calls it, and its HMAC signature is the only authentication.
+
+| Method and path | What it does |
 |---|---|
-| `src/api.js` | REST client: token caching (one exchange, shared, refreshed before expiry), retries on 429 and 5xx, `slow_down` handling, errors without secrets |
-| `src/enrolment.js` | Card enrolment: open session for a new user, connected session for a known user, check for a stored card first, poll (within the 40 reads/min budget), record the AgentCard user id |
-| `src/purchases.js` | Approval-gated purchases: request (validated, optional limit), approval link delivered to the user only, cancel, refresh, webhook state machine, and a retry rule that never re-charges |
-| `src/webhooks.js` | Signed webhook receiver: signature on the raw body, replay window, de-duplication by event id, release on failure so AgentCard retries, Node http adapter |
-| `src/store.js` | Storage contract with an in-memory implementation (Redis replaces it later, plan section 8). Holds no card data |
-| `src/routes.js` | Express routes under `/agentcard`. The user comes from the caller's session, never the request body |
-| `src/vault.js` | Browser checkout through `@agent-cards/checkout` (`attachToPlaywright`) for Camofox pages |
-| `src/service.js` | Composes all of the above. Registers the webhook endpoint with the events it uses |
-| `src/config.js` | Credentials from environment variables only. Sandbox or production is set by the credential |
+| `POST /agentcard/vault/enrol` | Returns `has_card` if the user already has a card, otherwise a vault link. `addAnother: true` mints a link that adds a second card for the same user. |
+| `GET /agentcard/vault/sessions/:id?userId=` | Owner-only status of a link: `pending`, `linked`, `expired` or `conflict`. Reads are budgeted. |
+| `GET /agentcard/vault/cards?userId=` | Stored cards, display fields only (brand, last4, expiry). |
+| `POST /agentcard/purchases` | Requests an approval-gated purchase. Returns `approvalUrl` for the backend to deliver to the user untouched. |
+| `GET /agentcard/purchases?userId=` | The user's purchases. |
+| `GET /agentcard/purchases/:id?userId=` | One purchase, its event log and whether a retry is safe. |
+| `POST /agentcard/purchases/:id/cancel` | Cancels a purchase still awaiting approval. |
+| `POST /agentcard/purchases/:id/refresh` | Reads the authoritative status from AgentCard (use when a webhook is late). |
+| `POST /agentcard/webhooks` | Signed AgentCard events. Mounted before the JSON parser so the raw bytes are verified. |
+
+Every route has an `@openapi` block in `server.js`, and the spec is in `openapi.json`.
+
+## How a card gets stored
+
+1. Backend calls `POST /agentcard/vault/enrol` with its user id.
+2. If the user has no card, the response carries a vault link. The backend sends it
+   to the user unchanged. The user enters the card on AgentCard's page, in the
+   company brand, and approves with a passkey.
+3. Storage is learned from the `vault.session_linked` and `vault.card_stored`
+   webhooks, or by polling `GET /vault/sessions/:id`, whichever comes first.
+4. The AgentCard user id is saved against our user id, and the session is closed.
+   A returning user is checked first (`vault_cards`), so they are never enrolled twice.
+
+## Where user ids are stored and found
+
+- Our user id maps to AgentCard's user id in the durable state file. Path:
+  `<profile dir>/../agentcard/state.json`, mode `0600`, written atomically.
+- It holds ids and purchase records only. No card data, tokens, client secrets
+  or webhook secrets.
+- It is reloaded on boot. A corrupt file is moved aside and the app starts empty.
+- If the file is lost, a `vault.session_linked` webhook still re-links the user,
+  because AgentCard sends our `external_user_id` back.
 
 ## Layout
 
 ```
 agentcard/
-  src/        modules above
+  src/
+    api.js            REST client: token cache, retries, errors without secrets
+    config.js         credentials from loadConfig(); no process.env reads here
+    store.js          in-memory store contract (snapshot, restore, de-duplication)
+    file-store.js     the store, persisted atomically to state.json
+    vault.js          enrolment: check, link, poll, record the mapping
+    checkout.js       approval-gated purchases, state machine, retry rule, limits
+    webhook.js        HMAC verification of the raw body
+    webhooks.js       receiver: verify, de-duplicate, dispatch, 500 on failure
+    http.js           Express handlers (server.js mounts them)
+    browser-checkout.js  @agent-cards/checkout for Camofox pages (Q4, untested live)
+    service.js        composes everything; boot never fails without credentials
+    index.js          public exports
   test/
-    agentcard.test.js   unit and flow tests (node:test)
-    routes.test.js      HTTP tests against the Express router
-    fake-agentcard.js   in-process AgentCard double built from the documented contract
+    helpers.js        makeService() with a fake clock and fake AgentCard
+    fake-agentcard.js in-process double built from the documented contract
+    agentcard.test.js, vault.test.js, checkout.test.js, webhooks.test.js,
+    http.test.js, persistence.test.js, browser-checkout.test.js
   scripts/
-    sandbox-check.mjs   first live check (needs sandbox credentials)
+    sandbox-check.mjs live check (sandbox credentials)
 ```
 
 ## Run the tests
 
 ```
-node --test agentcard/test/agentcard.test.js agentcard/test/routes.test.js
+node --test agentcard/test/agentcard.test.js agentcard/test/vault.test.js \
+  agentcard/test/checkout.test.js agentcard/test/webhooks.test.js \
+  agentcard/test/http.test.js agentcard/test/persistence.test.js \
+  agentcard/test/browser-checkout.test.js
 ```
 
-No network, no credentials and no SDK are needed. The fake implements the
-endpoints and statuses in the AgentCard API reference, and enforces bearer auth.
+No network, credentials or SDK are needed. The fake implements the endpoints and
+statuses from the AgentCard docs, and enforces bearer auth.
 
 ## Configuration
+
+Environment variables hold only secrets and service URLs. Behaviour is never set
+by environment variables. `lib/config.js` is the only place that reads them.
 
 | Variable | Required | Purpose |
 |---|---|---|
 | `AGENTCARD_CLIENT_ID` | yes | Platform client id |
 | `AGENTCARD_CLIENT_SECRET` | yes | Platform client secret |
-| `AGENTCARD_WEBHOOK_SECRET` | for webhooks | Endpoint signing secret (`whsec_...`), shown once when the endpoint is created |
+| `AGENTCARD_WEBHOOK_SECRET` | for webhooks | Endpoint signing secret (`whsec_...`), shown once at creation |
 | `AGENTCARD_BASE_URL` | no | Defaults to `https://api.agentcard.sh` |
 
-Start with sandbox credentials. In sandbox, the connect code is `111111`, and
-Stripe's published test cards work.
+Sandbox or production is set by the credentials. Start with sandbox. The connect
+code is `111111`, and Stripe's published test card works.
 
-Keep secrets in the environment or a secret store. Never commit them or print
-them.
+Keep secrets in the environment or a secret store. Never commit them, log them or print them.
 
 ## Live check (sandbox only)
 
-The keys are read from the repo's `.env` (git-ignored), or from the environment.
-Values are never printed.
-
 ```
-node agentcard/scripts/sandbox-check.mjs                          # token, enrolment session, poll, error handling
+node agentcard/scripts/sandbox-check.mjs                          # token, session, poll, error handling
 node agentcard/scripts/sandbox-check.mjs --user usr_...           # + approval-gated purchase: create, read, cancel
-node agentcard/scripts/sandbox-check.mjs --register-url https://your.app/agentcard/webhooks   # + webhook endpoint
+node agentcard/scripts/sandbox-check.mjs --register-url https://<railway-url>/agentcard/webhooks
 ```
 
-- Core checks open a sandbox enrolment session and print its URL. Open it yourself
-  and use connect code `111111` and Stripe's test card.
-- `--user` needs an AgentCard user id that has a sandbox card on file.
+- `--user` needs an AgentCard user id that already has a sandbox card on file. It
+  looks up that user's first card and fails clearly if there is none.
 - `--register-url` writes the endpoint secret to `.env` as `AGENTCARD_WEBHOOK_SECRET`.
-  The secret is shown only once, so it is never printed.
+  The value is never printed.
 - The script exits non-zero if any check that ran fails.
 
-## Mounting (after review)
+## Mounting
 
-`server.js` is production code, so this is a separate step. Mount behind an
-environment flag, so nothing changes unless it is set:
+Mounted in `server.js`, always on. Without credentials the routes answer `503` with
+the missing variable names, so a deploy without them keeps working.
 
-```js
-if (process.env.AGENTCARD_ENABLED === '1') {
-  const { createAgentCard, createAgentCardRouter, loadConfig, createMemoryStore } = await import('./agentcard/src/index.js');
-  const agentcard = createAgentCard({ config: loadConfig(), store: createMemoryStore(), deliverLink, deliverApprovalLink });
-  app.use('/agentcard', createAgentCardRouter({ agentcard, express, resolveUser: (req) => req.userIdFromSession }));
-}
-```
-
-Open points before mounting:
-- `resolveUser` must come from the authenticated session. Do not use the request body.
-- The webhook route must run before the global JSON parser, or the raw body is lost.
-- `deliverLink` and `deliverApprovalLink` must send the URL to the user through their own channel.
-- The store is in memory. Use it only for a single instance until Redis is built.
-
-## Rules this module follows (AgentCard docs)
-
-- The API is called from the backend only.
-- Card numbers never go through the chat or the model. Enrolment uses a link, and
-  links are sent unchanged.
-- Check for a stored card before sending a link, so a returning user is not enrolled twice.
-- One AgentCard user id per end user. Never share one across users.
-- Verify webhook signatures on the raw body. Reject timestamps older than 5 minutes.
-- Act on webhook events, not on what the agent says.
-- Approved and submitted purchases are never retried. A failed purchase is retried
-  only when the merchant or the processor confirms it failed.
-- Use `checkout_authorization.approved` as the authority for a charge, and
-  `settled` only as confirmation the processor took the money.
+Order in `server.js`, and why:
+- The webhook route comes before the global JSON parser, so the signature is
+  checked against the exact bytes. The handler refuses with `500 raw_body_required`
+  if the body was already parsed.
+- The user routes come after the access-key middleware.
+- Shutdown flushes the state file.
 
 ## Assumptions to confirm in sandbox
 
-These are not fully documented, so the code handles them defensively and the live
-check must confirm them:
+These are not fully documented. The code handles them defensively, and the live check confirms them.
 
-- The vault card list envelope. The code accepts an array, `data`, or `cards`.
-- The webhook `data` object for checkout events. The code expects `data.id` to be
-  the authorization id, and `data.settlement` when present.
+- The vault card list envelope (`data` array). Display fields are mapped from it.
 - The `vault.card_stored` payload fields (`user_id`, `card_id`, `brand`, `last4`).
-- Exact checkout event names beyond those listed in the webhook docs.
+- The checkout webhook `data` object: `data.id` is the authorization id, and
+  `data.settlement` is present when settlement is known.
+- Sandbox and production users are separate. A user id from one does not work in the other.
+
+## Rules this module follows
+
+- The API is called from the backend only.
+- Card numbers never go through the app or the model. Enrolment uses a link, and the link is sent unchanged.
+- One AgentCard user id per end user. Never shared across users.
+- Verify webhook signatures on the raw body. Reject timestamps older than 5 minutes.
+- Act on webhook events, not on what the agent says.
+- `approved` and `submitted` purchases are never retried. A purchase is retried only
+  after a decline, expiry or refusal, or a final unconfirmed settlement.
+- Purchase limits: `DEFAULT_MAX_AMOUNT_CENTS` is `null` (no limit) until the product owner sets one.
 
 ## Not built yet
 
-- Commerce SDK for food, flights and tables (`@agent-cards/commerce-sdk`). The docs
-  list DoorDash and other stores; each needs a connection flow.
-- Issuing (new virtual cards). Not needed while we use the user's own card (plan Q1).
+- Live verification of the purchase approval path (needs a sandbox user with a card).
+- A decision on the default purchase limit (`DEFAULT_MAX_AMOUNT_CENTS`).
+- Browser checkout on Camofox (plan Q4).
+- Commerce SDK for food, flights and tables (`@agent-cards/commerce-sdk`).
 - Identity verification, company wallet, rewards and presets.
-- Shared storage (Redis).
-- Browser checkout has not been tested on Camofox (plan Q4).
+- Shared storage (Redis). The state file is single-instance only.
 - Fee display and refunds (plan Q2 and Q3).
