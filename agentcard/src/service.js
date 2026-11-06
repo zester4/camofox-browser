@@ -1,113 +1,143 @@
 /**
- * Composes the AgentCard integration: API client, store, enrolment, purchases,
- * webhooks, and browser checkout.
+ * The AgentCard integration, composed.
  *
- * Usage (backend only):
- *   const agentcard = createAgentCard({
- *     config: loadConfig(),
- *     store: createMemoryStore(),
- *     deliverLink: async (userId, url) => sendToUser(userId, url),
- *     deliverApprovalLink: async (userId, url, info) => sendToUser(userId, url),
+ *   const agentcard = createAgentCardService({
+ *     config: cfg.agentcard,          // from lib/config.js
+ *     stateFile: '/data/agentcard/state.json',
+ *     log,
  *   });
+ *   agentcard.handlers.enrol           // Express handlers, see http.js
+ *
+ * Boot never fails because AgentCard is not configured. The routes answer 503
+ * until credentials are present, so a deploy without them keeps working.
  */
-import { createAgentCardApi } from './api.js';
+import { createAgentCardApi, AgentCardError } from './api.js';
 import { createMemoryStore } from './store.js';
-import { createEnrolment } from './enrolment.js';
-import { createPurchases } from './purchases.js';
-import { createWebhookHandler, createNodeRoute } from './webhooks.js';
-import { createVault, attachCheckout } from './vault.js';
+import { createFileStore } from './file-store.js';
+import { createVault } from './vault.js';
+import { createCheckout, DEFAULT_MAX_AMOUNT_CENTS } from './checkout.js';
+import { createWebhookHandler } from './webhooks.js';
+import { createHttpHandlers } from './http.js';
+import { loadConfig, requireCredentials, describeConfig } from './config.js';
+import { createSdkClient, attachBrowserCheckout } from './browser-checkout.js';
 
-/** Events we subscribe to when registering our endpoint. */
+/** Events this integration subscribes to when its endpoint is registered. */
 export const SUBSCRIBED_EVENTS = [
   'vault.session_linked',
   'vault.card_stored',
   'checkout_authorization.*',
 ];
 
+const API_METHODS = [
+  'createVaultSession', 'getVaultSession', 'listVaultCards',
+  'createAuthorization', 'getAuthorization', 'cancelAuthorization',
+  'createWebhookEndpoint', 'getWebhookSecret',
+];
+
 /**
  * @param {{
- *   config: { clientId: string, clientSecret: string, webhookSecret: string | null },
- *   store?: ReturnType<typeof createMemoryStore>,
- *   deliverLink: (userId: string, url: string, info: object) => Promise<void> | void,
- *   deliverApprovalLink: (userId: string, url: string, info: object) => Promise<void> | void,
- *   maxAmountCents?: number,
- *   fetchImpl?: typeof fetch,
+ *   config: object,                     // the AgentCard block from lib/config.js (or a plain object)
+ *   stateFile?: string | null,          // durable state path; null keeps state in memory
+ *   log?: (level: string, msg: string, fields?: object) => void,
  *   now?: () => number,
+ *   fetchImpl?: typeof fetch,
  *   sleep?: (ms: number) => Promise<void>,
- *   onEvent?: (event: object) => void,
+ *   maxAmountCents?: number | null,
+ *   sdkLoader?: () => Promise<any>,
  * }} options
  */
-export function createAgentCard(options) {
-  const { config } = options;
-  const store = options.store ?? createMemoryStore();
-  const api = createAgentCardApi({
-    clientId: config.clientId,
-    clientSecret: config.clientSecret,
-    fetchImpl: options.fetchImpl,
-    now: options.now,
-    sleep: options.sleep,
-  });
-  const enrolment = createEnrolment({ api, store, deliverLink: options.deliverLink, now: options.now });
-  const purchases = createPurchases({
-    api,
+export function createAgentCardService(options) {
+  const log = options.log ?? (() => {});
+  const config = loadConfig(options.config ?? {});
+  const store = options.stateFile
+    ? createFileStore(options.stateFile, { log })
+    : createMemoryStore();
+
+  let api = null;
+  function getApi() {
+    if (!api) {
+      requireCredentials(config);
+      api = createAgentCardApi({
+        clientId: config.clientId,
+        clientSecret: config.clientSecret,
+        baseUrl: config.baseUrl,
+        fetchImpl: options.fetchImpl,
+        sleep: options.sleep,
+        now: options.now,
+      });
+    }
+    return api;
+  }
+
+  // Modules receive a delegating client so that they can be built before
+  // credentials exist. Each call checks credentials first.
+  const lazyApi = Object.fromEntries(
+    API_METHODS.map((name) => [name, (...args) => getApi()[name](...args)]),
+  );
+
+  const vault = createVault({ api: lazyApi, store, now: options.now, log });
+  const checkout = createCheckout({
+    api: lazyApi,
     store,
-    deliverApprovalLink: options.deliverApprovalLink,
-    maxAmountCents: options.maxAmountCents ?? null,
+    vault,
+    maxAmountCents: options.maxAmountCents ?? DEFAULT_MAX_AMOUNT_CENTS,
+    log,
   });
 
   let webhookHandler = null;
-  let vaultClient = null;
-
-  function getWebhooks() {
-    if (!config.webhookSecret) throw new Error('AGENTCARD_WEBHOOK_SECRET is not set');
+  function webhooks() {
+    if (!config.webhookSecret) {
+      const err = new Error('AGENTCARD_WEBHOOK_SECRET is not set');
+      err.code = 'not_configured';
+      throw err;
+    }
     if (!webhookHandler) {
       webhookHandler = createWebhookHandler({
         secret: config.webhookSecret,
         store,
-        enrolment,
-        purchases,
-        onEvent: options.onEvent,
+        vault,
+        checkout,
+        log,
         now: options.now,
       });
     }
     return webhookHandler;
   }
 
+  let sdk = null;
   return {
-    api,
+    config,
+    describe: () => describeConfig(config),
+    configured: Boolean(config.clientId && config.clientSecret),
     store,
-    enrolment,
-    purchases,
+    vault,
+    checkout,
+    webhooks,
+    handlers: createHttpHandlers({ vault, checkout, webhooks, log }),
 
-    /** Webhook handler. Needs AGENTCARD_WEBHOOK_SECRET. */
-    webhooks: getWebhooks,
-
-    /** Node http route for the webhook endpoint. */
-    webhookRoute() {
-      return createNodeRoute(getWebhooks());
-    },
-
-    /**
-     * Register our endpoint with AgentCard. Run once per environment, then store
-     * the returned secret in AGENTCARD_WEBHOOK_SECRET. The secret is shown only once.
-     */
+    /** Register this app's webhook endpoint. Run once per environment; the secret is shown once. */
     registerWebhookEndpoint({ url, description }) {
-      return api.createWebhookEndpoint({ url, enabledEvents: SUBSCRIBED_EVENTS, description });
+      return getApi().createWebhookEndpoint({ url, enabledEvents: SUBSCRIBED_EVENTS, description });
     },
 
-    /**
-     * Attach checkout to a Playwright page through the SDK. The SDK pauses the
-     * card request and calls onApprovalUrl. Purchase outcomes arrive by webhook.
-     */
-    async attachCheckout(page, purchase) {
-      if (!vaultClient) vaultClient = await createVault(config, { loadSdk: options.loadSdk });
+    /** Browser checkout through @agent-cards/checkout, for pages driven by Camofox. */
+    async attachBrowserCheckout(page, purchase) {
       const agentcardUserId = store.getAgentCardUser(purchase.userId);
       if (!agentcardUserId) {
-        const err = new Error('This user has no card on file. Send an enrolment link first.');
+        const err = new Error('This user has no card on file. Store a card first.');
         err.code = 'not_enrolled';
         throw err;
       }
-      return attachCheckout(vaultClient, page, { ...purchase, agentcardUserId });
+      requireCredentials(config);
+      if (!sdk) sdk = await createSdkClient(config, { loadSdk: options.sdkLoader });
+      return attachBrowserCheckout(sdk, page, { ...purchase, agentcardUserId });
+    },
+
+    /** Flush durable state. Call on shutdown. */
+    flush() {
+      if (typeof store.flush === 'function') store.flush();
     },
   };
 }
+
+export { AgentCardError };

@@ -9,6 +9,7 @@ import { expandMacro } from './lib/macros.js';
 import { getSearchFallbacks } from './lib/search-fallbacks.js';
 import { hasGoogleOrganicResults } from './lib/google-serp.js';
 import { loadConfig } from './lib/config.js';
+import { createAgentCardService } from './agentcard/src/index.js';
 import { contextIdentityOptions, launchLocale } from './lib/browser-identity.js';
 import { normalizePlaywrightProxy, createProxyPool, buildProxyUrl } from './lib/proxy.js';
 import { createFlyHelpers } from './lib/fly.js';
@@ -143,6 +144,55 @@ function log(level, msg, fields = {}) {
 }
 
 const app = express();
+
+// AgentCard, state and service. Boot never fails when AgentCard is not configured:
+// the routes answer 503 until credentials are set.
+const agentcard = createAgentCardService({ config: CONFIG.agentcard, stateFile: CONFIG.agentcard.stateFile, log });
+
+/**
+ * @openapi
+ * /agentcard/webhooks:
+ *   post:
+ *     tags: [System]
+ *     summary: AgentCard webhook receiver
+ *     description: >
+ *       Called by AgentCard, not by users. The request is authenticated by its
+ *       AgentCard-Signature header (HMAC-SHA256 over the raw body). Deliveries are
+ *       de-duplicated by event id. Not behind the access key.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Accepted (or already processed).
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *       401:
+ *         description: Signature missing, wrong or stale.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Handler failed. AgentCard retries the delivery.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       503:
+ *         description: Webhook secret not configured.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+app.post('/agentcard/webhooks', express.raw({ type: '*/*', limit: '256kb' }), agentcard.handlers.webhook);
+
 const globalJsonParser = express.json({ limit: '100kb' });
 app.use((req, res, next) => {
   if (req.method === 'POST' && /^\/tabs\/[^/]+\/evaluate$/.test(req.path)) {
@@ -195,6 +245,316 @@ app.use('/tabs/:tabId', fly.replayMiddleware(log));
 // dedicated keys (cookie import -> CAMOFOX_API_KEY, /stop -> CAMOFOX_ADMIN_KEY)
 // so each key gates a distinct surface. When unset, behavior is unchanged.
 app.use(accessKeyMiddleware(CONFIG));
+
+/**
+ * @openapi
+ * /agentcard/vault/enrol:
+ *   post:
+ *     tags: [Sessions]
+ *     summary: Store a card, or add another card, for a user
+ *     description: >
+ *       If the user already has a card on file, returns has_card and sends no link.
+ *       Otherwise returns a vault link for the backend to deliver to the user
+ *       unchanged. The card is entered on AgentCard's page, never in this app.
+ *       One pending link per user. With addAnother, a new link is minted for a
+ *       second card under the same user.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [userId]
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: This app's stable id for the user.
+ *               addAnother:
+ *                 type: boolean
+ *                 default: false
+ *     responses:
+ *       200:
+ *         description: has_card (cards on file), or the pending link for this user.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AgentCardVaultResult'
+ *       201:
+ *         description: A new vault link was created.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AgentCardVaultResult'
+ *       400:
+ *         description: userId missing or invalid.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       502:
+ *         description: AgentCard is unavailable.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       503:
+ *         description: AgentCard is not configured.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+app.post('/agentcard/vault/enrol', agentcard.handlers.enrol);
+
+/**
+ * @openapi
+ * /agentcard/vault/sessions/{sessionId}:
+ *   get:
+ *     tags: [Sessions]
+ *     summary: Check a vault link (pending, linked, expired or conflict)
+ *     description: Owner only. Reads are rate-limited to the AgentCard budget; a too-early read returns retryAfterMs.
+ *     parameters:
+ *       - name: sessionId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - name: userId
+ *         in: query
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Current status.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AgentCardSessionStatus'
+ *       404:
+ *         description: No such session for this user.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+app.get('/agentcard/vault/sessions/:sessionId', agentcard.handlers.pollSession);
+
+/**
+ * @openapi
+ * /agentcard/vault/cards:
+ *   get:
+ *     tags: [Sessions]
+ *     summary: List a user's stored cards (display fields only)
+ *     parameters:
+ *       - name: userId
+ *         in: query
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Cards on file. Never includes card numbers.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 enrolled:
+ *                   type: boolean
+ *                 cards:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/AgentCardCard'
+ *       400:
+ *         description: userId missing.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+app.get('/agentcard/vault/cards', agentcard.handlers.listCards);
+
+/**
+ * @openapi
+ * /agentcard/purchases:
+ *   post:
+ *     tags: [Interaction]
+ *     summary: Request a purchase paid with the user's card, approved by the user
+ *     description: >
+ *       Nothing is charged until the user approves the returned approvalUrl on their
+ *       own device with their passkey. Deliver approvalUrl to the user untouched.
+ *       Outcomes arrive by webhook. A declined or expired purchase may be retried;
+ *       an approved one is never retried.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/AgentCardPurchaseRequest'
+ *     responses:
+ *       201:
+ *         description: Awaiting the user's approval.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AgentCardPurchase'
+ *       400:
+ *         description: Invalid request.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       409:
+ *         description: No card on file (not_enrolled or no_card).
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       422:
+ *         description: Above the configured amount limit.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+app.post('/agentcard/purchases', agentcard.handlers.createPurchase);
+
+/**
+ * @openapi
+ * /agentcard/purchases:
+ *   get:
+ *     tags: [Interaction]
+ *     summary: List a user's purchases
+ *     parameters:
+ *       - name: userId
+ *         in: query
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: The user's purchases, newest activity first.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 purchases:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/AgentCardPurchase'
+ */
+app.get('/agentcard/purchases', agentcard.handlers.listPurchases);
+
+/**
+ * @openapi
+ * /agentcard/purchases/{purchaseId}:
+ *   get:
+ *     tags: [Interaction]
+ *     summary: One purchase, with its event log and whether a retry is safe
+ *     parameters:
+ *       - name: purchaseId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - name: userId
+ *         in: query
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: The purchase.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AgentCardPurchase'
+ *       404:
+ *         description: Not found for this user.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+app.get('/agentcard/purchases/:purchaseId', agentcard.handlers.getPurchase);
+
+/**
+ * @openapi
+ * /agentcard/purchases/{purchaseId}/cancel:
+ *   post:
+ *     tags: [Interaction]
+ *     summary: Cancel a purchase that is still awaiting approval
+ *     parameters:
+ *       - name: purchaseId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [userId]
+ *             properties:
+ *               userId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: The purchase after cancellation (or unchanged if it already moved on).
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AgentCardPurchase'
+ *       404:
+ *         description: Not found for this user.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+app.post('/agentcard/purchases/:purchaseId/cancel', agentcard.handlers.cancelPurchase);
+
+/**
+ * @openapi
+ * /agentcard/purchases/{purchaseId}/refresh:
+ *   post:
+ *     tags: [Interaction]
+ *     summary: Read a purchase's authoritative status from AgentCard (use when a webhook is late)
+ *     parameters:
+ *       - name: purchaseId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [userId]
+ *             properties:
+ *               userId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: The purchase with the latest status.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AgentCardPurchase'
+ *       404:
+ *         description: Not found for this user.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+app.post('/agentcard/purchases/:purchaseId/refresh', agentcard.handlers.refreshPurchase);
 
 const ALLOWED_URL_SCHEMES = ['http:', 'https:'];
 
@@ -7885,6 +8245,7 @@ process.on('unhandledRejection', (reason) => {
 let shuttingDown = false;
 
 async function gracefulShutdown(signal) {
+  try { agentcard.flush(); } catch { /* best effort: writes are already atomic */ }
   if (shuttingDown) return;
   shuttingDown = true;
   log('info', 'shutting down', { signal });

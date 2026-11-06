@@ -78,10 +78,744 @@
             "type": "string"
           }
         }
+      },
+      "AgentCardCard": {
+        "type": "object",
+        "description": "Display fields for a stored card. Card numbers are never returned.",
+        "properties": {
+          "cardId": {
+            "type": "string"
+          },
+          "brand": {
+            "type": "string",
+            "nullable": true
+          },
+          "last4": {
+            "type": "string",
+            "nullable": true
+          },
+          "expiryMonth": {
+            "type": "integer",
+            "nullable": true
+          },
+          "expiryYear": {
+            "type": "integer",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "AgentCardVaultResult": {
+        "type": "object",
+        "description": "has_card when the user already has a card (no link). Otherwise a link to deliver to the user untouched.",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "has_card",
+              "link"
+            ]
+          },
+          "cards": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentCardCard"
+            }
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Vault link. Send untouched."
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "enrol",
+              "add_card"
+            ]
+          },
+          "reused": {
+            "type": "boolean",
+            "description": "True when the pending link for this user was returned again."
+          }
+        }
+      },
+      "AgentCardSessionStatus": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "linked",
+              "expired",
+              "conflict"
+            ]
+          },
+          "retryAfterMs": {
+            "type": "integer",
+            "description": "Present when polled too early or still pending."
+          }
+        }
+      },
+      "AgentCardPurchaseRequest": {
+        "type": "object",
+        "required": [
+          "userId",
+          "merchant",
+          "amount",
+          "currency",
+          "psp",
+          "request"
+        ],
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "merchant": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "amount": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Minor units (cents)."
+          },
+          "currency": {
+            "type": "string",
+            "pattern": "^[a-z]{3}$",
+            "example": "usd"
+          },
+          "psp": {
+            "type": "string",
+            "pattern": "^[a-z][a-z_]{1,31}$",
+            "example": "stripe"
+          },
+          "checkoutOrigin": {
+            "type": "string",
+            "format": "uri",
+            "description": "Origin of the merchant checkout page (https, no path)."
+          },
+          "request": {
+            "type": "object",
+            "required": [
+              "url",
+              "method"
+            ],
+            "properties": {
+              "url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "method": {
+                "type": "string",
+                "enum": [
+                  "POST",
+                  "PUT",
+                  "PATCH"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "AgentCardPurchase": {
+        "type": "object",
+        "properties": {
+          "purchaseId": {
+            "type": "string"
+          },
+          "merchant": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "integer"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "awaiting_approval",
+              "approved",
+              "submitted_on_device",
+              "declined",
+              "expired",
+              "refused",
+              "settled",
+              "not_settled",
+              "cancelled"
+            ]
+          },
+          "cardId": {
+            "type": "string",
+            "nullable": true
+          },
+          "settlement": {
+            "type": "string",
+            "enum": [
+              "settled",
+              "not_settled",
+              "unknown"
+            ],
+            "nullable": true
+          },
+          "chargedAmount": {
+            "type": "integer",
+            "nullable": true
+          },
+          "approvalUrl": {
+            "type": "string",
+            "format": "uri",
+            "nullable": true,
+            "description": "Send untouched to the user for approval. Present while awaiting approval."
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "canRetry": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
       }
     }
   },
   "paths": {
+    "/agentcard/webhooks": {
+      "post": {
+        "tags": [
+          "System"
+        ],
+        "summary": "AgentCard webhook receiver",
+        "description": "Called by AgentCard, not by users. The request is authenticated by its AgentCard-Signature header (HMAC-SHA256 over the raw body). Deliveries are de-duplicated by event id. Not behind the access key.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Accepted (or already processed).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Signature missing, wrong or stale.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Handler failed. AgentCard retries the delivery.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Webhook secret not configured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agentcard/vault/enrol": {
+      "post": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "Store a card, or add another card, for a user",
+        "description": "If the user already has a card on file, returns has_card and sends no link. Otherwise returns a vault link for the backend to deliver to the user unchanged. The card is entered on AgentCard's page, never in this app. One pending link per user. With addAnother, a new link is minted for a second card under the same user.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "userId"
+                ],
+                "properties": {
+                  "userId": {
+                    "type": "string",
+                    "description": "This app's stable id for the user."
+                  },
+                  "addAnother": {
+                    "type": "boolean",
+                    "default": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "has_card (cards on file), or the pending link for this user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentCardVaultResult"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "A new vault link was created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentCardVaultResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "userId missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "AgentCard is unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "AgentCard is not configured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agentcard/vault/sessions/{sessionId}": {
+      "get": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "Check a vault link (pending, linked, expired or conflict)",
+        "description": "Owner only. Reads are rate-limited to the AgentCard budget; a too-early read returns retryAfterMs.",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current status.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentCardSessionStatus"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such session for this user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agentcard/vault/cards": {
+      "get": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "List a user's stored cards (display fields only)",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cards on file. Never includes card numbers.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "enrolled": {
+                      "type": "boolean"
+                    },
+                    "cards": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AgentCardCard"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "userId missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agentcard/purchases": {
+      "post": {
+        "tags": [
+          "Interaction"
+        ],
+        "summary": "Request a purchase paid with the user's card, approved by the user",
+        "description": "Nothing is charged until the user approves the returned approvalUrl on their own device with their passkey. Deliver approvalUrl to the user untouched. Outcomes arrive by webhook. A declined or expired purchase may be retried; an approved one is never retried.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentCardPurchaseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Awaiting the user's approval.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentCardPurchase"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "No card on file (not_enrolled or no_card).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Above the configured amount limit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Interaction"
+        ],
+        "summary": "List a user's purchases",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The user's purchases, newest activity first.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "purchases": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AgentCardPurchase"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agentcard/purchases/{purchaseId}": {
+      "get": {
+        "tags": [
+          "Interaction"
+        ],
+        "summary": "One purchase, with its event log and whether a retry is safe",
+        "parameters": [
+          {
+            "name": "purchaseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The purchase.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentCardPurchase"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found for this user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agentcard/purchases/{purchaseId}/cancel": {
+      "post": {
+        "tags": [
+          "Interaction"
+        ],
+        "summary": "Cancel a purchase that is still awaiting approval",
+        "parameters": [
+          {
+            "name": "purchaseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "userId"
+                ],
+                "properties": {
+                  "userId": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The purchase after cancellation (or unchanged if it already moved on).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentCardPurchase"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found for this user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agentcard/purchases/{purchaseId}/refresh": {
+      "post": {
+        "tags": [
+          "Interaction"
+        ],
+        "summary": "Read a purchase's authoritative status from AgentCard (use when a webhook is late)",
+        "parameters": [
+          {
+            "name": "purchaseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "userId"
+                ],
+                "properties": {
+                  "userId": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The purchase with the latest status.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentCardPurchase"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found for this user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/sessions/{userId}/cookies": {
       "post": {
         "tags": [

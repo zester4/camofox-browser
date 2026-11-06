@@ -130,8 +130,12 @@ async function main() {
   // 6. purchase path (needs a user who has linked a sandbox card)
   if (userId && userId !== true) {
     try {
+      const cards = await api.listVaultCards(userId);
+      const cardId = cards?.data?.[0]?.id;
+      if (!cardId) throw new Error('no card stored for this user; store a sandbox card first');
       const auth = await api.createAuthorization({
         user: userId,
+        card_id: cardId,
         merchant: 'Sandbox check (cancel me)',
         amount: 1,
         currency: 'usd',
