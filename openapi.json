@@ -237,6 +237,44 @@
           }
         }
       },
+      "AgentCardPreset": {
+        "type": "object",
+        "description": "One of the user’s spending rules. attachments lists the cards it applies to.",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string",
+            "nullable": true
+          },
+          "version": {
+            "type": "integer",
+            "nullable": true
+          },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "card"
+                  ]
+                },
+                "cardId": {
+                  "type": "string"
+                },
+                "last4": {
+                  "type": "string",
+                  "nullable": true
+                }
+              }
+            }
+          }
+        }
+      },
       "AgentCardPurchase": {
         "type": "object",
         "properties": {
@@ -799,6 +837,924 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AgentCardPurchase"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found for this user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agentcard/purchases/prepare": {
+      "post": {
+        "tags": [
+          "Interaction"
+        ],
+        "summary": "Approve a purchase before the browser pays (recommended)",
+        "description": "The user approves the merchant and amount on their own device first. Then the browser clicks Pay once. Poll GET /agentcard/purchases/{purchaseId}/refresh until status is \"ready\", and start Pay before readyExpiresAt (about 30 seconds). Deliver approvalUrl to the user untouched.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "userId",
+                  "merchant",
+                  "amount",
+                  "currency",
+                  "psp",
+                  "merchantOrigin"
+                ],
+                "properties": {
+                  "userId": {
+                    "type": "string"
+                  },
+                  "merchant": {
+                    "type": "string",
+                    "maxLength": 120
+                  },
+                  "amount": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Minor units."
+                  },
+                  "currency": {
+                    "type": "string",
+                    "example": "usd"
+                  },
+                  "psp": {
+                    "type": "string",
+                    "example": "stripe"
+                  },
+                  "merchantOrigin": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "https origin of the merchant checkout"
+                  },
+                  "cardId": {
+                    "type": "string"
+                  },
+                  "checkoutKey": {
+                    "type": "string",
+                    "minLength": 16,
+                    "maxLength": 128,
+                    "description": "Repeating the same key returns the same preparation."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Awaiting the user's approval.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentCardPurchase"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "No card on file.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agentcard/purchases/{purchaseId}/outcome": {
+      "post": {
+        "tags": [
+          "Interaction"
+        ],
+        "summary": "Report what a merchant did with an auto-approved purchase AgentCard did not charge",
+        "description": "Only for purchases with chargedKind \"none\". Other purchases get 409 outcome_not_reportable. AgentCard keeps every report and does not verify it.",
+        "parameters": [
+          {
+            "name": "purchaseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "userId",
+                  "outcome"
+                ],
+                "properties": {
+                  "userId": {
+                    "type": "string"
+                  },
+                  "outcome": {
+                    "type": "string",
+                    "enum": [
+                      "charged",
+                      "declined",
+                      "refunded"
+                    ]
+                  },
+                  "amount": {
+                    "type": "integer",
+                    "description": "Required for charged and refunded."
+                  },
+                  "currency": {
+                    "type": "string",
+                    "description": "Required for charged."
+                  },
+                  "processorReference": {
+                    "type": "string",
+                    "maxLength": 255
+                  },
+                  "partnerReference": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "description": "Refunds only."
+                  },
+                  "reason": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "description": "Declined only."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentCardPurchase"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Not reportable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agentcard/processors": {
+      "get": {
+        "tags": [
+          "Interaction"
+        ],
+        "summary": "Which processors this company can pay on",
+        "description": "Lists processors AgentCard can complete for token checkout. \"needsPreparation\" lists those that require POST /agentcard/purchases/prepare first.",
+        "parameters": [
+          {
+            "name": "capabilities",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The processor lists.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "processors": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "needsPreparation": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agentcard/vault/send-link": {
+      "post": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "Have AgentCard text or email the user their vault link",
+        "description": "For a user already connected to AgentCard. Returns the url only when AgentCard did not send it (a branded Vault), which the backend must then deliver untouched.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "userId"
+                ],
+                "properties": {
+                  "userId": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Result. sent is true when AgentCard delivered it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sent": {
+                      "type": "boolean"
+                    },
+                    "url": {
+                      "type": "string",
+                      "format": "uri",
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "No card on file.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "AgentCard has no phone or email for this user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agentcard/vault/connection": {
+      "delete": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "Disconnect a user from AgentCard",
+        "description": "Stops their tokens, pending links and sessions. Their cards stay in their vault and their purchase history stays here. Returns 202 when AgentCard asks us to call again.",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Disconnected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "connected": {
+                      "type": "boolean"
+                    },
+                    "pending": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Pending on AgentCard. Call again.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "connected": {
+                      "type": "boolean"
+                    },
+                    "pending": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agentcard/users": {
+      "delete": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "Erase a user's AgentCard data here and disconnect them",
+        "description": "Removes the mapping, sessions and purchase history we hold. Cards stay in the user's vault; the user can remove them there.",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Erased.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Disconnect pending on AgentCard. Call again.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agentcard/presets/{label}": {
+      "put": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "Set one of the user's spending rules (preset)",
+        "description": "Enforced by AgentCard before any approval. Re-saving replaces the rules and keeps attachments. Amounts are in cents here.",
+        "parameters": [
+          {
+            "name": "label",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9-]{0,39}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "userId"
+                ],
+                "properties": {
+                  "userId": {
+                    "type": "string"
+                  },
+                  "perDayCents": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "perWeekCents": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "perMonthCents": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "totalCents": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "All-time cap per attached card."
+                  },
+                  "onlyMerchants": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "categories": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "meals",
+                        "groceries",
+                        "travel",
+                        "software",
+                        "ai",
+                        "wellness",
+                        "retail"
+                      ]
+                    }
+                  },
+                  "currencies": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "onlyDays": {
+                    "type": "string",
+                    "example": "weekdays"
+                  },
+                  "onlyHours": {
+                    "type": "string",
+                    "example": "9-17"
+                  },
+                  "timezone": {
+                    "type": "string",
+                    "example": "Europe/London"
+                  },
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "strict",
+                      "watch"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The saved preset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentCardPreset"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid rules.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "One of the user's presets",
+        "parameters": [
+          {
+            "name": "label",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The preset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentCardPreset"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "Delete one of the user's presets",
+        "parameters": [
+          {
+            "name": "label",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agentcard/presets": {
+      "get": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "The user's presets",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The user's presets only.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "presets": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AgentCardPreset"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agentcard/presets/{label}/attach": {
+      "post": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "Attach one of the user's presets to one of their cards",
+        "parameters": [
+          {
+            "name": "label",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "userId"
+                ],
+                "properties": {
+                  "userId": {
+                    "type": "string"
+                  },
+                  "cardId": {
+                    "type": "string",
+                    "description": "Default is the first card on file."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The preset with its attachments.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentCardPreset"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Card not on this user's vault.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agentcard/tabs/{tabId}/payment": {
+      "post": {
+        "tags": [
+          "Interaction"
+        ],
+        "summary": "Arm payment on a tab",
+        "description": "Call before the agent clicks Pay in this tab. The next card request to a supported processor is paused, the user is asked to approve on their device, and AgentCard's response is replayed. Read the outcome with GET .../payment/{attachmentId}. The merchant's own confirmation still has to be read from the page. Works on Camofox (Firefox) and does not need Chromium.\n",
+        "parameters": [
+          {
+            "name": "tabId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "userId",
+                  "merchant",
+                  "amount",
+                  "currency"
+                ],
+                "properties": {
+                  "userId": {
+                    "type": "string"
+                  },
+                  "merchant": {
+                    "type": "string",
+                    "maxLength": 120
+                  },
+                  "amount": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Minor units."
+                  },
+                  "currency": {
+                    "type": "string",
+                    "example": "usd"
+                  },
+                  "checkoutOrigin": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "https origin of the merchant checkout page"
+                  },
+                  "cardId": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Armed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "attachmentId": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tab not found for this user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agentcard/tabs/{tabId}/payment/{attachmentId}": {
+      "get": {
+        "tags": [
+          "Interaction"
+        ],
+        "summary": "Status of a payment attachment: approval link, the purchase, and each card request result",
+        "parameters": [
+          {
+            "name": "tabId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "attachmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Status. approvalUrl appears once a card request has been paused.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "attachmentId": {
+                      "type": "string"
+                    },
+                    "phase": {
+                      "type": "string",
+                      "enum": [
+                        "idle",
+                        "pending",
+                        "completed"
+                      ]
+                    },
+                    "approvalUrl": {
+                      "type": "string",
+                      "format": "uri",
+                      "nullable": true
+                    },
+                    "purchaseId": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "results": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found for this user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Interaction"
+        ],
+        "summary": "Disarm payment on a tab",
+        "parameters": [
+          {
+            "name": "tabId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "attachmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Disarmed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
                 }
               }
             }

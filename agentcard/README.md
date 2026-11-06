@@ -64,14 +64,15 @@ agentcard/
     webhook.js        HMAC verification of the raw body
     webhooks.js       receiver: verify, de-duplicate, dispatch, 500 on failure
     http.js           Express handlers (server.js mounts them)
-    browser-checkout.js  @agent-cards/checkout for Camofox pages (Q4, untested live)
+    interception.js   pays on any page (Camofox included): pauses the card request, approval, fulfil
+    account.js        processors, vault link, disconnect/erase, spend presets
     service.js        composes everything; boot never fails without credentials
     index.js          public exports
   test/
     helpers.js        makeService() with a fake clock and fake AgentCard
     fake-agentcard.js in-process double built from the documented contract
     agentcard.test.js, vault.test.js, checkout.test.js, webhooks.test.js,
-    http.test.js, persistence.test.js, browser-checkout.test.js
+    http.test.js, persistence.test.js, payments.test.js
   scripts/
     sandbox-check.mjs live check (sandbox credentials)
 ```
@@ -82,7 +83,7 @@ agentcard/
 node --test agentcard/test/agentcard.test.js agentcard/test/vault.test.js \
   agentcard/test/checkout.test.js agentcard/test/webhooks.test.js \
   agentcard/test/http.test.js agentcard/test/persistence.test.js \
-  agentcard/test/browser-checkout.test.js
+  agentcard/test/payments.test.js
 ```
 
 No network, credentials or SDK are needed. The fake implements the endpoints and
@@ -156,7 +157,7 @@ These are not fully documented. The code handles them defensively, and the live 
 
 - Live verification of the purchase approval path (needs a sandbox user with a card).
 - A decision on the default purchase limit (`DEFAULT_MAX_AMOUNT_CENTS`).
-- Browser checkout on Camofox (plan Q4).
+- Q4 answered from the SDK's own docs: its browser attach is Chromium-only, so it is not used on Camofox. Payment on Camofox uses the interception path instead, which is unverified live.
 - Commerce SDK for food, flights and tables (`@agent-cards/commerce-sdk`).
 - Identity verification, company wallet, rewards and presets.
 - Shared storage (Redis). The state file is single-instance only.

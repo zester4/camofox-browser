@@ -10,6 +10,8 @@ import { getSearchFallbacks } from './lib/search-fallbacks.js';
 import { hasGoogleOrganicResults } from './lib/google-serp.js';
 import { loadConfig } from './lib/config.js';
 import { createAgentCardService } from './agentcard/src/index.js';
+import { sendAgentCardError } from './agentcard/src/http.js';
+import { randomUUID as agentcardRandomUUID } from 'node:crypto';
 import { contextIdentityOptions, launchLocale } from './lib/browser-identity.js';
 import { normalizePlaywrightProxy, createProxyPool, buildProxyUrl } from './lib/proxy.js';
 import { createFlyHelpers } from './lib/fly.js';
@@ -555,6 +557,513 @@ app.post('/agentcard/purchases/:purchaseId/cancel', agentcard.handlers.cancelPur
  *               $ref: '#/components/schemas/Error'
  */
 app.post('/agentcard/purchases/:purchaseId/refresh', agentcard.handlers.refreshPurchase);
+
+/**
+ * @openapi
+ * /agentcard/purchases/prepare:
+ *   post:
+ *     tags: [Interaction]
+ *     summary: Approve a purchase before the browser pays (recommended)
+ *     description: >
+ *       The user approves the merchant and amount on their own device first. Then the
+ *       browser clicks Pay once. Poll GET /agentcard/purchases/{purchaseId}/refresh until
+ *       status is "ready", and start Pay before readyExpiresAt (about 30 seconds).
+ *       Deliver approvalUrl to the user untouched.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [userId, merchant, amount, currency, psp, merchantOrigin]
+ *             properties:
+ *               userId: { type: string }
+ *               merchant: { type: string, maxLength: 120 }
+ *               amount: { type: integer, minimum: 1, description: Minor units. }
+ *               currency: { type: string, example: usd }
+ *               psp: { type: string, example: stripe }
+ *               merchantOrigin: { type: string, format: uri, description: https origin of the merchant checkout }
+ *               cardId: { type: string }
+ *               checkoutKey: { type: string, minLength: 16, maxLength: 128, description: Repeating the same key returns the same preparation. }
+ *     responses:
+ *       201:
+ *         description: Awaiting the user's approval.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AgentCardPurchase'
+ *       400:
+ *         description: Invalid request.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       409:
+ *         description: No card on file.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+app.post('/agentcard/purchases/prepare', agentcard.handlers.preparePurchase);
+
+/**
+ * @openapi
+ * /agentcard/purchases/{purchaseId}/outcome:
+ *   post:
+ *     tags: [Interaction]
+ *     summary: Report what a merchant did with an auto-approved purchase AgentCard did not charge
+ *     description: Only for purchases with chargedKind "none". Other purchases get 409 outcome_not_reportable. AgentCard keeps every report and does not verify it.
+ *     parameters:
+ *       - { name: purchaseId, in: path, required: true, schema: { type: string } }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [userId, outcome]
+ *             properties:
+ *               userId: { type: string }
+ *               outcome: { type: string, enum: [charged, declined, refunded] }
+ *               amount: { type: integer, description: Required for charged and refunded. }
+ *               currency: { type: string, description: Required for charged. }
+ *               processorReference: { type: string, maxLength: 255 }
+ *               partnerReference: { type: string, maxLength: 255, description: Refunds only. }
+ *               reason: { type: string, maxLength: 255, description: Declined only. }
+ *     responses:
+ *       200:
+ *         description: Recorded.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AgentCardPurchase'
+ *       409:
+ *         description: Not reportable.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+app.post('/agentcard/purchases/:purchaseId/outcome', agentcard.handlers.reportOutcome);
+
+/**
+ * @openapi
+ * /agentcard/processors:
+ *   get:
+ *     tags: [Interaction]
+ *     summary: Which processors this company can pay on
+ *     description: Lists processors AgentCard can complete for token checkout. "needsPreparation" lists those that require POST /agentcard/purchases/prepare first.
+ *     parameters:
+ *       - { name: capabilities, in: query, required: false, schema: { type: string } }
+ *     responses:
+ *       200:
+ *         description: The processor lists.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 processors: { type: array, items: { type: string } }
+ *                 needsPreparation: { type: array, items: { type: string } }
+ */
+app.get('/agentcard/processors', agentcard.handlers.processors);
+
+/**
+ * @openapi
+ * /agentcard/vault/send-link:
+ *   post:
+ *     tags: [Sessions]
+ *     summary: Have AgentCard text or email the user their vault link
+ *     description: For a user already connected to AgentCard. Returns the url only when AgentCard did not send it (a branded Vault), which the backend must then deliver untouched.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [userId]
+ *             properties:
+ *               userId: { type: string }
+ *     responses:
+ *       200:
+ *         description: Result. sent is true when AgentCard delivered it.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 sent: { type: boolean }
+ *                 url: { type: string, format: uri, nullable: true }
+ *       409:
+ *         description: No card on file.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       422:
+ *         description: AgentCard has no phone or email for this user.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+app.post('/agentcard/vault/send-link', agentcard.handlers.sendVaultLink);
+
+/**
+ * @openapi
+ * /agentcard/vault/connection:
+ *   delete:
+ *     tags: [Sessions]
+ *     summary: Disconnect a user from AgentCard
+ *     description: Stops their tokens, pending links and sessions. Their cards stay in their vault and their purchase history stays here. Returns 202 when AgentCard asks us to call again.
+ *     parameters:
+ *       - { name: userId, in: query, required: true, schema: { type: string } }
+ *     responses:
+ *       200:
+ *         description: Disconnected.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 connected: { type: boolean }
+ *                 pending: { type: boolean }
+ *       202:
+ *         description: Pending on AgentCard. Call again.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 connected: { type: boolean }
+ *                 pending: { type: boolean }
+ */
+app.delete('/agentcard/vault/connection', agentcard.handlers.disconnect);
+
+/**
+ * @openapi
+ * /agentcard/users:
+ *   delete:
+ *     tags: [Sessions]
+ *     summary: Erase a user's AgentCard data here and disconnect them
+ *     description: Removes the mapping, sessions and purchase history we hold. Cards stay in the user's vault; the user can remove them there.
+ *     parameters:
+ *       - { name: userId, in: query, required: true, schema: { type: string } }
+ *     responses:
+ *       200:
+ *         description: Erased.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *       202:
+ *         description: Disconnect pending on AgentCard. Call again.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ */
+app.delete('/agentcard/users', agentcard.handlers.eraseUser);
+
+/**
+ * @openapi
+ * /agentcard/presets/{label}:
+ *   put:
+ *     tags: [Sessions]
+ *     summary: Set one of the user's spending rules (preset)
+ *     description: Enforced by AgentCard before any approval. Re-saving replaces the rules and keeps attachments. Amounts are in cents here.
+ *     parameters:
+ *       - { name: label, in: path, required: true, schema: { type: string, pattern: '^[a-z0-9][a-z0-9-]{0,39}$' } }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [userId]
+ *             properties:
+ *               userId: { type: string }
+ *               perDayCents: { type: integer, minimum: 1 }
+ *               perWeekCents: { type: integer, minimum: 1 }
+ *               perMonthCents: { type: integer, minimum: 1 }
+ *               totalCents: { type: integer, minimum: 1, description: All-time cap per attached card. }
+ *               onlyMerchants: { type: array, items: { type: string } }
+ *               categories: { type: array, items: { type: string, enum: [meals, groceries, travel, software, ai, wellness, retail] } }
+ *               currencies: { type: array, items: { type: string } }
+ *               onlyDays: { type: string, example: weekdays }
+ *               onlyHours: { type: string, example: "9-17" }
+ *               timezone: { type: string, example: Europe/London }
+ *               mode: { type: string, enum: [strict, watch] }
+ *     responses:
+ *       200:
+ *         description: The saved preset.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AgentCardPreset'
+ *       400:
+ *         description: Invalid rules.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *   get:
+ *     tags: [Sessions]
+ *     summary: One of the user's presets
+ *     parameters:
+ *       - { name: label, in: path, required: true, schema: { type: string } }
+ *       - { name: userId, in: query, required: true, schema: { type: string } }
+ *     responses:
+ *       200:
+ *         description: The preset.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AgentCardPreset'
+ *   delete:
+ *     tags: [Sessions]
+ *     summary: Delete one of the user's presets
+ *     parameters:
+ *       - { name: label, in: path, required: true, schema: { type: string } }
+ *       - { name: userId, in: query, required: true, schema: { type: string } }
+ *     responses:
+ *       200:
+ *         description: Deleted.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ */
+app.put('/agentcard/presets/:label', agentcard.handlers.setPreset);
+app.get('/agentcard/presets/:label', agentcard.handlers.getPreset);
+app.delete('/agentcard/presets/:label', agentcard.handlers.deletePreset);
+
+/**
+ * @openapi
+ * /agentcard/presets:
+ *   get:
+ *     tags: [Sessions]
+ *     summary: The user's presets
+ *     parameters:
+ *       - { name: userId, in: query, required: true, schema: { type: string } }
+ *     responses:
+ *       200:
+ *         description: The user's presets only.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 presets:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/AgentCardPreset'
+ */
+app.get('/agentcard/presets', agentcard.handlers.listPresets);
+
+/**
+ * @openapi
+ * /agentcard/presets/{label}/attach:
+ *   post:
+ *     tags: [Sessions]
+ *     summary: Attach one of the user's presets to one of their cards
+ *     parameters:
+ *       - { name: label, in: path, required: true, schema: { type: string } }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [userId]
+ *             properties:
+ *               userId: { type: string }
+ *               cardId: { type: string, description: Default is the first card on file. }
+ *     responses:
+ *       200:
+ *         description: The preset with its attachments.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AgentCardPreset'
+ *       404:
+ *         description: Card not on this user's vault.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+app.post('/agentcard/presets/:label/attach', agentcard.handlers.attachPreset);
+
+// One payment attachment per tab. The browser pauses the card request; the user approves on their device.
+const agentcardAttachments = new Map(); // attachmentId -> record
+
+/**
+ * @openapi
+ * /agentcard/tabs/{tabId}/payment:
+ *   post:
+ *     tags: [Interaction]
+ *     summary: Arm payment on a tab
+ *     description: >
+ *       Call before the agent clicks Pay in this tab. The next card request to a supported
+ *       processor is paused, the user is asked to approve on their device, and AgentCard's
+ *       response is replayed. Read the outcome with GET .../payment/{attachmentId}. The
+ *       merchant's own confirmation still has to be read from the page. Works on Camofox
+ *       (Firefox) and does not need Chromium.
+ *     parameters:
+ *       - { name: tabId, in: path, required: true, schema: { type: string } }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [userId, merchant, amount, currency]
+ *             properties:
+ *               userId: { type: string }
+ *               merchant: { type: string, maxLength: 120 }
+ *               amount: { type: integer, minimum: 1, description: Minor units. }
+ *               currency: { type: string, example: usd }
+ *               checkoutOrigin: { type: string, format: uri, description: https origin of the merchant checkout page }
+ *               cardId: { type: string }
+ *     responses:
+ *       201:
+ *         description: Armed.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 attachmentId: { type: string }
+ *       404:
+ *         description: Tab not found for this user.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+app.post('/agentcard/tabs/:tabId/payment', async (req, res) => {
+  try {
+    const userId = typeof req.body?.userId === 'string' ? req.body.userId.trim() : '';
+    if (!userId) return res.status(400).json({ error: 'invalid_request', message: 'userId is required' });
+    const { merchant, amount, currency, checkoutOrigin, cardId } = req.body;
+    if (typeof merchant !== 'string' || !merchant.trim() || merchant.length > 120) return res.status(400).json({ error: 'invalid_request', message: 'merchant is required (max 120 characters)' });
+    if (!Number.isInteger(amount) || amount <= 0) return res.status(400).json({ error: 'invalid_request', message: 'amount must be a positive integer in minor units' });
+    if (typeof currency !== 'string' || !/^[a-z]{3}$/.test(currency)) return res.status(400).json({ error: 'invalid_request', message: 'currency must be a lowercase ISO code, e.g. usd' });
+    if (checkoutOrigin !== undefined) {
+      let o;
+      try { o = new URL(checkoutOrigin); } catch { o = null; }
+      if (!o || o.protocol !== 'https:' || o.pathname !== '/' || o.search || o.hash) return res.status(400).json({ error: 'invalid_request', message: 'checkoutOrigin must be an https origin with no path' });
+    }
+
+    const session = sessions.get(normalizeUserId(userId));
+    const found = session && findTab(session, req.params.tabId);
+    if (!found) return tabNotFoundResponse(res, req.params.tabId);
+
+    // Re-arming a tab replaces its earlier attachment.
+    for (const [id, rec] of agentcardAttachments) {
+      if (rec.tabId === req.params.tabId && rec.userId === userId) {
+        await rec.handle.detach().catch(() => {});
+        agentcardAttachments.delete(id);
+      }
+    }
+
+    const attachmentId = agentcardRandomUUID();
+    const record = { id: attachmentId, userId, tabId: req.params.tabId, approvalUrl: null, purchaseId: null, handle: null, createdAt: new Date().toISOString() };
+    record.handle = await agentcard.attachPayment(found.tabState.page, {
+      userId,
+      merchant: merchant.trim(),
+      amount,
+      currency,
+      checkoutOrigin,
+      cardId,
+      onApprovalUrl: (url, purchaseId) => { record.approvalUrl = url; record.purchaseId = purchaseId; },
+    });
+    agentcardAttachments.set(attachmentId, record);
+    res.status(201).json({ attachmentId, tabId: record.tabId });
+  } catch (err) {
+    sendAgentCardError(res, err, log);
+  }
+});
+
+/**
+ * @openapi
+ * /agentcard/tabs/{tabId}/payment/{attachmentId}:
+ *   get:
+ *     tags: [Interaction]
+ *     summary: "Status of a payment attachment: approval link, the purchase, and each card request result"
+ *     parameters:
+ *       - { name: tabId, in: path, required: true, schema: { type: string } }
+ *       - { name: attachmentId, in: path, required: true, schema: { type: string } }
+ *       - { name: userId, in: query, required: true, schema: { type: string } }
+ *     responses:
+ *       200:
+ *         description: Status. approvalUrl appears once a card request has been paused.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 attachmentId: { type: string }
+ *                 phase: { type: string, enum: [idle, pending, completed] }
+ *                 approvalUrl: { type: string, format: uri, nullable: true }
+ *                 purchaseId: { type: string, nullable: true }
+ *                 results: { type: array, items: { type: object } }
+ *       404:
+ *         description: Not found for this user.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *   delete:
+ *     tags: [Interaction]
+ *     summary: Disarm payment on a tab
+ *     parameters:
+ *       - { name: tabId, in: path, required: true, schema: { type: string } }
+ *       - { name: attachmentId, in: path, required: true, schema: { type: string } }
+ *       - { name: userId, in: query, required: true, schema: { type: string } }
+ *     responses:
+ *       200:
+ *         description: Disarmed.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *       404:
+ *         description: Not found for this user.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+function agentcardAttachmentFor(req, res) {
+  const userId = typeof req.query?.userId === 'string' ? req.query.userId.trim() : '';
+  const rec = agentcardAttachments.get(req.params.attachmentId);
+  if (!userId || !rec || rec.userId !== userId || rec.tabId !== req.params.tabId) {
+    res.status(404).json({ error: 'not_found', message: 'No payment attachment for this user and tab' });
+    return null;
+  }
+  return rec;
+}
+app.get('/agentcard/tabs/:tabId/payment/:attachmentId', (req, res) => {
+  const rec = agentcardAttachmentFor(req, res);
+  if (!rec) return;
+  res.json({
+    attachmentId: rec.id,
+    phase: rec.handle.state().phase,
+    approvalUrl: rec.approvalUrl,
+    purchaseId: rec.purchaseId,
+    results: rec.handle.results(),
+  });
+});
+app.delete('/agentcard/tabs/:tabId/payment/:attachmentId', async (req, res) => {
+  const rec = agentcardAttachmentFor(req, res);
+  if (!rec) return;
+  await rec.handle.detach();
+  agentcardAttachments.delete(rec.id);
+  res.json({ attachmentId: rec.id, detached: true });
+});
 
 const ALLOWED_URL_SCHEMES = ['http:', 'https:'];
 

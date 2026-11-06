@@ -89,6 +89,7 @@ RUN apt-get update \
 COPY server.js ./
 COPY camofox.config.json ./
 COPY lib/ ./lib/
+COPY agentcard/ ./agentcard/
 # lib/cookies.js is a compatibility re-export from ../mcp/lib/cookies.mjs, so mcp/
 # must ship even though the MCP server itself is not run here. Without it the
 # persistence plugin dies at load with ERR_MODULE_NOT_FOUND, the server starts

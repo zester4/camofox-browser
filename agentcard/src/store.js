@@ -47,6 +47,13 @@ export function createMemoryStore({ now = CLOCK, seenLimit = 10_000, onChange = 
       users.set(userId, agentcardUserId);
       changed();
     },
+    /** Removes the AgentCard link and open sessions for a user. Purchase history is kept. */
+    unlinkUser(userId) {
+      const had = users.delete(userId);
+      for (const [id, s] of sessions) if (s.userId === userId) sessions.delete(id);
+      changed();
+      return had;
+    },
     listUsers() {
       return [...users.entries()].map(([userId, agentcardUserId]) => ({ userId, agentcardUserId }));
     },

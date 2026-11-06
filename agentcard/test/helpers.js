@@ -21,7 +21,7 @@ export function makeService(opts = {}) {
     },
     stateFile: opts.stateFile ?? null,
     fetchImpl: fake.fetch,
-    sleep: async () => {},
+    sleep: opts.sleep ?? (async () => {}),
     now: () => clock,
     maxAmountCents: opts.maxAmountCents ?? null,
     log: (level, msg, fields) => logs.push({ level, msg, fields }),

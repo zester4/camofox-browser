@@ -20,6 +20,7 @@ const STATUS_BY_CODE = {
   no_card: 409,
   card_not_found: 404,
   over_limit: 422,
+  outcome_not_reportable: 409,
   not_configured: 503,
 };
 
@@ -31,6 +32,9 @@ function userIdFrom(req) {
 }
 
 function sendError(res, err, log) {
+  if (err instanceof AgentCardError && err.code === 'policy_invalid') {
+    return res.status(400).json({ error: 'policy_invalid', message: err.message });
+  }
   if (err instanceof AgentCardError) {
     log('error', 'agentcard: upstream error', { status: err.status, code: err.code });
     return res.status(502).json({ error: 'agentcard_unavailable', upstreamStatus: err.status, retryable: err.retryable });
@@ -41,6 +45,11 @@ function sendError(res, err, log) {
   return res.status(500).json({ error: 'internal_error' });
 }
 
+/** Maps an error to the HTTP response this module uses everywhere. Exported for the routes server.js adds. */
+export function sendAgentCardError(res, err, log = () => {}) {
+  return sendError(res, err, log);
+}
+
 /**
  * @param {{
  *   vault: ReturnType<import('./vault.js').createVault>,
@@ -49,7 +58,7 @@ function sendError(res, err, log) {
  *   log?: (level: string, msg: string, fields?: object) => void,
  * }} deps
  */
-export function createHttpHandlers({ vault, checkout, webhooks, log = () => {} }) {
+export function createHttpHandlers({ vault, checkout, account, webhooks, log = () => {} }) {
   /** Wrap a handler so that user checks and errors are handled in one place. */
   function userRoute(fn) {
     return async (req, res) => {
@@ -105,6 +114,70 @@ export function createHttpHandlers({ vault, checkout, webhooks, log = () => {} }
     /** POST /agentcard/purchases/:purchaseId/refresh */
     refreshPurchase: userRoute(async (req, res, userId) => {
       res.json(await checkout.refresh(userId, req.params.purchaseId));
+    }),
+
+    /** GET /agentcard/payments/processors  (no user: the processor list for this company) */
+    processors: async (req, res) => {
+      try {
+        const capabilities = typeof req.query?.capabilities === 'string' && req.query.capabilities.trim()
+          ? req.query.capabilities.trim()
+          : undefined;
+        res.json(await account.processors({ capabilities }));
+      } catch (err) {
+        sendError(res, err, log);
+      }
+    },
+
+    /** POST /agentcard/purchases/prepare: the user approves merchant and amount before Pay */
+    preparePurchase: userRoute(async (req, res, userId) => {
+      res.status(201).json(await checkout.prepare(userId, req.body ?? {}));
+    }),
+
+    /** POST /agentcard/purchases/:purchaseId/outcome: report a charge we did not see (auto-approved only) */
+    reportOutcome: userRoute(async (req, res, userId) => {
+      res.json(await checkout.reportOutcome(userId, req.params.purchaseId, req.body ?? {}));
+    }),
+
+    /** POST /agentcard/vault/send-link: AgentCard texts or emails the user their vault link */
+    sendVaultLink: userRoute(async (req, res, userId) => {
+      res.json(await account.sendVaultLink(userId));
+    }),
+
+    /** DELETE /agentcard/vault/connection: disconnect (cards stay in the user's vault) */
+    disconnect: userRoute(async (req, res, userId) => {
+      const result = await account.disconnect(userId);
+      res.status(result.pending ? 202 : 200).json(result);
+    }),
+
+    /** DELETE /agentcard/users: disconnect and remove everything we hold for the user */
+    eraseUser: userRoute(async (req, res, userId) => {
+      const result = await account.erase(userId);
+      res.status(result.erased ? 200 : 202).json(result);
+    }),
+
+    /** PUT /agentcard/presets/:label */
+    setPreset: userRoute(async (req, res, userId) => {
+      res.json(await account.setPreset(userId, req.params.label, req.body?.rules ?? req.body ?? {}));
+    }),
+
+    /** GET /agentcard/presets */
+    listPresets: userRoute(async (req, res, userId) => {
+      res.json({ presets: await account.listPresets(userId) });
+    }),
+
+    /** GET /agentcard/presets/:label */
+    getPreset: userRoute(async (req, res, userId) => {
+      res.json(await account.getPreset(userId, req.params.label));
+    }),
+
+    /** DELETE /agentcard/presets/:label */
+    deletePreset: userRoute(async (req, res, userId) => {
+      res.json(await account.deletePreset(userId, req.params.label));
+    }),
+
+    /** POST /agentcard/presets/:label/attach  body: { userId, cardId? } */
+    attachPreset: userRoute(async (req, res, userId) => {
+      res.json(await account.attachPreset(userId, req.params.label, req.body?.cardId));
     }),
 
     /** POST /agentcard/webhooks  (raw body; signature checked by the handler) */
