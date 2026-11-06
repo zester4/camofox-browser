@@ -1546,6 +1546,266 @@
         }
       }
     },
+    "/agentcard/commerce/buy": {
+      "post": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "Run one buy call (products, food, tables, flights) for a user",
+        "description": "The backend calls this from its trusted tool layer. The model's input is ask, confirm, new_order, product_id and store_id only. The user is bound by userId here, never by the model. Links are returned for the backend to deliver untouched. A card-less user gets a vault link on the first call. Calls can take up to 130 seconds.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "userId",
+                  "ask"
+                ],
+                "properties": {
+                  "userId": {
+                    "type": "string"
+                  },
+                  "threadId": {
+                    "type": "string",
+                    "maxLength": 128
+                  },
+                  "ask": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "confirm": {
+                    "type": "boolean"
+                  },
+                  "new_order": {
+                    "type": "boolean"
+                  },
+                  "product_id": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "store_id": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The buy result. `model` is what the model may read (no links). `links` and `products` are for the backend to deliver.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    },
+                    "reply": {
+                      "type": "string"
+                    },
+                    "messages": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "links": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "products": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "link_sent": {
+                      "type": "boolean"
+                    },
+                    "approval_expires_at": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "shopper_need_not_reply": {
+                      "type": "boolean"
+                    },
+                    "model": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input, or an unknown field.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "AgentCard did not answer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agentcard/commerce/tool": {
+      "get": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "The buy tool's definition (name, description, input schema)",
+        "responses": {
+          "200": {
+            "description": "The definition from @agent-cards/commerce-sdk.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agentcard/merchants": {
+      "get": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "Can AgentCard pay at a store (merchant check)",
+        "description": "Passes through AgentCard's GET /buy/merchants. `supported` is true when a real purchase went through, false when AgentCard cannot pay there, and null when no recent purchase or conversation settles it. With userId, direct merchants carry `link_status` for that user.",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "catalog"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Merchants and the next page cursor.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "merchants": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string"
+                          },
+                          "slug": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "domain": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "supported": {
+                            "type": "boolean",
+                            "nullable": true
+                          },
+                          "supported_reason": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "link_status": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "next_cursor": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "counts": {
+                      "type": "object",
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/agentcard/tabs/{tabId}/payment": {
       "post": {
         "tags": [

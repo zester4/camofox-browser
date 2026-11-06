@@ -5,7 +5,7 @@ system together (plan sections 0 and 5). The user stores their own card once, on
 AgentCard's page. The card number never reaches this app or the model. Each
 purchase needs the user's approval on their own device with their passkey.
 
-**Status:** built, wired into `server.js`, and tested offline (79 tests, including
+**Status:** built, wired into `server.js`, and tested offline (121 tests, including
 real HTTP and a restart). It has not yet run against live AgentCard. The live step
 needs sandbox credentials and a human to complete the passkey enrolment.
 
@@ -25,6 +25,9 @@ AgentCard calls it, and its HMAC signature is the only authentication.
 | `GET /agentcard/purchases/:id?userId=` | One purchase, its event log and whether a retry is safe. |
 | `POST /agentcard/purchases/:id/cancel` | Cancels a purchase still awaiting approval. |
 | `POST /agentcard/purchases/:id/refresh` | Reads the authoritative status from AgentCard (use when a webhook is late). |
+| `POST /agentcard/commerce/buy` | One buy call for the user (products, food, tables, flights). The backend sends `userId` and the model's five fields. Returns `model` (no links) and the links and products to deliver. |
+| `GET /agentcard/commerce/tool` | The buy tool's definition from the SDK, for the backend's model. |
+| `GET /agentcard/merchants` | Merchant check: whether AgentCard can pay at each store (`supported`). With `userId`, direct merchants carry `link_status` (connections). |
 | `POST /agentcard/webhooks` | Signed AgentCard events. Mounted before the JSON parser so the raw bytes are verified. |
 
 Every route has an `@openapi` block in `server.js`, and the spec is in `openapi.json`.
@@ -66,15 +69,17 @@ agentcard/
     http.js           Express handlers (server.js mounts them)
     interception.js   pays on any page (Camofox included): pauses the card request, approval, fulfil
     account.js        processors, vault link, disconnect/erase, spend presets
+    commerce.js       buy tool from @agent-cards/commerce-sdk, bound to our userId; merchant check
     service.js        composes everything; boot never fails without credentials
     index.js          public exports
   test/
     helpers.js        makeService() with a fake clock and fake AgentCard
     fake-agentcard.js in-process double built from the documented contract
     agentcard.test.js, vault.test.js, checkout.test.js, webhooks.test.js,
-    http.test.js, persistence.test.js, payments.test.js
+    http.test.js, persistence.test.js, payments.test.js, commerce.test.js
   scripts/
     sandbox-check.mjs live check (sandbox credentials)
+    camoufox-pay-check.mjs payment on Firefox (Camoufox), no Chromium. --engine-only needs no account
 ```
 
 ## Run the tests
@@ -83,7 +88,7 @@ agentcard/
 node --test agentcard/test/agentcard.test.js agentcard/test/vault.test.js \
   agentcard/test/checkout.test.js agentcard/test/webhooks.test.js \
   agentcard/test/http.test.js agentcard/test/persistence.test.js \
-  agentcard/test/payments.test.js
+  agentcard/test/payments.test.js agentcard/test/commerce.test.js
 ```
 
 No network, credentials or SDK are needed. The fake implements the endpoints and
@@ -105,6 +110,17 @@ Sandbox or production is set by the credentials. Start with sandbox. The connect
 code is `111111`, and Stripe's published test card works.
 
 Keep secrets in the environment or a secret store. Never commit them, log them or print them.
+
+## Payment on Firefox (no Chromium)
+
+```
+npm run fetch-bin                                        # once: downloads the Camoufox binary
+node agentcard/scripts/camoufox-pay-check.mjs --engine-only   # Firefox launches; a page request is paused and answered
+node agentcard/scripts/camoufox-pay-check.mjs --user camo-check  # full sandbox payment, with your approval
+```
+
+The full check opens a sandbox enrolment link, waits for the card, pays on a local checkout
+page, and prints an approval link for your device. It has not been run yet.
 
 ## Live check (sandbox only)
 
@@ -151,14 +167,15 @@ These are not fully documented. The code handles them defensively, and the live 
 - Act on webhook events, not on what the agent says.
 - `approved` and `submitted` purchases are never retried. A purchase is retried only
   after a decline, expiry or refusal, or a final unconfirmed settlement.
-- Purchase limits: `DEFAULT_MAX_AMOUNT_CENTS` is `null` (no limit) until the product owner sets one.
+- Purchase limits: decided. The app sets no cap (`DEFAULT_MAX_AMOUNT_CENTS` is `null`). Each user sets their own limits with AgentCard presets (`agentcard_preset_set`), and AgentCard enforces them before any approval.
 
 ## Not built yet
 
 - Live verification of the purchase approval path (needs a sandbox user with a card).
-- A decision on the default purchase limit (`DEFAULT_MAX_AMOUNT_CENTS`).
 - Q4 answered from the SDK's own docs: its browser attach is Chromium-only, so it is not used on Camofox. Payment on Camofox uses the interception path instead, which is unverified live.
-- Commerce SDK for food, flights and tables (`@agent-cards/commerce-sdk`).
+- Live verification of the buy tool against AgentCard's `/buy` endpoints (offline tests use an injected buy tool; the merchant check runs over HTTP against the documented shape).
+- Flight traveler details and flight cancellation. The current Commerce SDK and REST docs do not document `buy_save_traveler` or `buy_cancel_flight`, so they are not built. Flights are bought through the buy tool as `book` products.
+- Issuing, identity verification, company wallet and user balance (out of scope for this release).
 - Identity verification, company wallet, rewards and presets.
 - Shared storage (Redis). The state file is single-instance only.
 - Fee display and refunds (plan Q2 and Q3).

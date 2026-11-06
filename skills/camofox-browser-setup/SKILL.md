@@ -71,3 +71,27 @@ Never ask the user to type a password in chat. The handoff exists so they type i
 - Do not bypass robots.txt, site terms, or captchas. Hand off instead.
 - Do not run lookups about private individuals.
 - Logins persist only when the server has `CAMOFOX_STORAGE_KEY` set. Do not promise a saved login without checking.
+
+## Payments with the user's own card (AgentCard)
+
+The user saves their card once on AgentCard's page. The card number never reaches the
+agent or this server. Each payment needs the user's approval on their own device.
+
+1. Check for a card: `agentcard_cards`. If there is none, call `agentcard_enrol` and send
+   the returned link to the user, unchanged. Never open it or change it.
+2. Shop, or pay on a page you control:
+   - Stores and bookings: `agentcard_merchants` first, then `agentcard_buy`. Pass the
+     shopper's words as `ask`. Set `confirm` only after the user says yes to the cart.
+   - Any checkout page: open it in a tab, then `camofox_pay_arm` with the merchant,
+     the most the user can be charged in cents, and the currency.
+3. Poll `camofox_pay_status`. When `approvalUrl` appears, send it to the user unchanged.
+   The page's card request waits until they approve with their passkey.
+4. Stop with `camofox_pay_disarm` when the checkout is done.
+
+Limits: set them with `agentcard_preset_set` (for example a weekly cap or allowed
+merchants). AgentCard enforces them before any approval.
+
+## Handing a tab to the user
+
+`camofox_handoff_start` pauses the agent on a tab and returns a control link. Send it to
+the user only. `camofox_handoff_release` returns control to the agent.

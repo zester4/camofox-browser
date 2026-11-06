@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "camofox-browser": {
+      "command": "npx",
+      "args": ["-y", "@askjo/camofox-browser-mcp"],
+      "env": {
+        "CAMOFOX_BASE_URL": "${CAMOFOX_BASE_URL}",
+        "CAMOFOX_ACCESS_KEY": "${CAMOFOX_ACCESS_KEY}",
+        "CAMOFOX_USER_ID": "${CAMOFOX_USER_ID}"
+      }
+    }
+  }
+}

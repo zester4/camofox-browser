@@ -77,7 +77,7 @@ const SEARCH_MACROS = [
 ];
 
 /**
- * The 11 tools, identical schema for both hosts. Edit here and both update.
+ * The tools, identical schema for both hosts. Edit here and both update.
  * @type {ToolDef[]}
  */
 export const TOOL_DEFS = [
@@ -233,6 +233,166 @@ export const TOOL_DEFS = [
       required: ['cookiesPath'],
     },
   },
+  {
+    name: 'camofox_handoff_start',
+    description:
+      'Hand a tab to the human for a login, a CAPTCHA or a check. Returns a controlUrl: send it to the user only, unchanged. The agent must not act on the tab until the handoff is released.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        tabId: { type: 'string', description: 'Tab identifier' },
+        reason: { type: 'string', description: 'Shown to the user, e.g. "Sign in to your bank"' },
+        idleMs: { type: 'number', description: 'Milliseconds of inactivity before control returns to the agent' },
+      },
+      required: ['tabId'],
+    },
+  },
+  {
+    name: 'camofox_handoff_release',
+    description: 'Return control of a tab to the agent after a handoff.',
+    inputSchema: {
+      type: 'object',
+      properties: { tabId: { type: 'string', description: 'Tab identifier' } },
+      required: ['tabId'],
+    },
+  },
+  {
+    name: 'camofox_pay_arm',
+    description:
+      'Pay on this tab with the user\'s own card. Arms payment on the page: when the checkout sends its card request, it is paused until the user approves on their device with their passkey. The user never gives the card number, and the agent never sees it. Returns attachmentId; then call camofox_pay_status to get the approval link to send to the user.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        tabId: { type: 'string', description: 'Tab identifier of the checkout page' },
+        merchant: { type: 'string', description: 'Store name, shown on the approval screen (max 120 characters)' },
+        amount: { type: 'integer', description: 'Most the user can be charged, in minor units (cents). 2306 is $23.06' },
+        currency: { type: 'string', description: 'Lowercase ISO 4217 code, e.g. usd' },
+        checkoutOrigin: { type: 'string', description: 'https origin of the checkout page, e.g. https://shop.example.com' },
+        cardId: { type: 'string', description: 'Which stored card to use; omit for the first one' },
+      },
+      required: ['tabId', 'merchant', 'amount', 'currency'],
+    },
+  },
+  {
+    name: 'camofox_pay_status',
+    description:
+      'Read a payment attachment. approvalUrl appears once a card request is paused: send it to the user unchanged. phase is idle, pending or completed.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        tabId: { type: 'string', description: 'Tab identifier' },
+        attachmentId: { type: 'string', description: 'From camofox_pay_arm' },
+      },
+      required: ['tabId', 'attachmentId'],
+    },
+  },
+  {
+    name: 'camofox_pay_disarm',
+    description: 'Stop paying on a tab. Any paused card request that is not yet approved is cancelled.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        tabId: { type: 'string', description: 'Tab identifier' },
+        attachmentId: { type: 'string', description: 'From camofox_pay_arm' },
+      },
+      required: ['tabId', 'attachmentId'],
+    },
+  },
+  {
+    name: 'agentcard_enrol',
+    description:
+      'Start storing the user\'s card with AgentCard. Returns has_card when a card is already stored (nothing to do), otherwise a vault link. Send the link to the user unchanged. The user enters the card on AgentCard\'s page. Card numbers never pass through this tool.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        addAnother: { type: 'boolean', description: 'true to add a second card for this user' },
+      },
+      required: [],
+    },
+  },
+  {
+    name: 'agentcard_cards',
+    description: 'List the cards stored for this user (brand, last4, expiry). Card numbers are never returned.',
+    inputSchema: { type: 'object', properties: {}, required: [] },
+  },
+  {
+    name: 'agentcard_buy',
+    description:
+      'Shop for the user at real stores through AgentCard: products, food delivery, table reservations (action reserve) and flights (action book). Pass the shopper\'s words in ask. Pass product_id or store_id only when the user picked one from a previous result. Set confirm true only when the user said yes to the cart. The response has links for the user: send them exactly as given, never change or summarise them.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        ask: { type: 'string', description: 'What the user said, in their own words (max 2000 characters)' },
+        threadId: { type: 'string', description: 'The chat, so one purchase stays in one chat (max 128 characters)' },
+        confirm: { type: 'boolean', description: 'true only when the user said yes to the cart or asks to check out' },
+        new_order: { type: 'boolean', description: 'true only when the user drops the cart to start a new order' },
+        product_id: { type: 'string', description: 'The product the user picked from the last result' },
+        store_id: { type: 'string', description: 'The store the user picked from the last result' },
+      },
+      required: ['ask'],
+    },
+  },
+  {
+    name: 'agentcard_merchants',
+    description:
+      'Check whether AgentCard can pay at a store before sending the user there. supported is true (a real purchase went through), false (cannot pay there) or null (not known yet). For direct merchants such as DoorDash, link_status shows whether the user still has to connect.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        kind: { type: 'string', description: 'e.g. catalog or direct' },
+        q: { type: 'string', description: 'Part of a store name or domain (max 100 characters)' },
+        limit: { type: 'integer', description: '1 to 100' },
+        cursor: { type: 'string', description: 'next_cursor from the previous page' },
+      },
+      required: [],
+    },
+  },
+  {
+    name: 'agentcard_presets_list',
+    description: 'List this user\'s spending rules (presets). Limits are enforced by AgentCard before any approval.',
+    inputSchema: { type: 'object', properties: {}, required: [] },
+  },
+  {
+    name: 'agentcard_preset_set',
+    description:
+      'Create or change one of the user\'s spending rules. Money is in cents. Rules apply to the next purchase. Use this when the user sets a limit, such as a daily cap or merchants they allow.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        label: { type: 'string', description: '1 to 40 lowercase letters, digits or hyphens, e.g. groceries-weekly' },
+        rules: {
+          type: 'object',
+          description: 'At least one rule. Money fields are integer cents.',
+          properties: {
+            perDayCents: { type: 'integer' },
+            perWeekCents: { type: 'integer' },
+            perMonthCents: { type: 'integer' },
+            totalCents: { type: 'integer' },
+            onlyMerchants: { type: 'array', items: { type: 'string' } },
+            categories: { type: 'array', items: { type: 'string', enum: ['meals', 'groceries', 'travel', 'software', 'ai', 'wellness', 'retail'] } },
+            currencies: { type: 'array', items: { type: 'string' } },
+            onlyDays: { type: 'string' },
+            onlyHours: { type: 'string', description: 'e.g. 9-17' },
+            timezone: { type: 'string', description: 'IANA zone, e.g. Europe/London' },
+            mode: { type: 'string', enum: ['strict', 'watch'] },
+          },
+        },
+      },
+      required: ['label', 'rules'],
+    },
+  },
+  {
+    name: 'agentcard_preset_attach',
+    description: 'Attach one of the user\'s spending rules to one of their cards (default: the first card).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        label: { type: 'string', description: 'The rule\'s label' },
+        cardId: { type: 'string', description: 'Which stored card' },
+      },
+      required: ['label'],
+    },
+  },
 ];
 
 /** Quick name → def lookup. */
@@ -348,6 +508,103 @@ export function buildRequest(name, args, ctx) {
     case 'camofox_import_cookies':
       // Async (Netscape parse + path check) — caller must use buildCookieRequest().
       throw new Error('camofox_import_cookies requires buildCookieRequest() (async cookie parsing)');
+    case 'camofox_handoff_start':
+      return {
+        method: 'POST',
+        path: `/tabs/${encodeURIComponent(args.tabId)}/handoff`,
+        auth: 'accessKey',
+        responseKind: 'json',
+        body: { userId, reason: args.reason, idleMs: args.idleMs },
+      };
+    case 'camofox_handoff_release':
+      return {
+        method: 'POST',
+        path: `/tabs/${encodeURIComponent(args.tabId)}/handoff/release`,
+        auth: 'accessKey',
+        responseKind: 'json',
+        body: { userId },
+      };
+    case 'camofox_pay_arm':
+      return {
+        method: 'POST',
+        path: `/agentcard/tabs/${encodeURIComponent(args.tabId)}/payment`,
+        auth: 'accessKey',
+        responseKind: 'json',
+        body: {
+          userId,
+          merchant: args.merchant,
+          amount: args.amount,
+          currency: args.currency,
+          checkoutOrigin: args.checkoutOrigin,
+          cardId: args.cardId,
+        },
+      };
+    case 'camofox_pay_status':
+      return {
+        method: 'GET',
+        path: `/agentcard/tabs/${encodeURIComponent(args.tabId)}/payment/${encodeURIComponent(args.attachmentId)}?${new URLSearchParams({ userId })}`,
+        auth: 'accessKey',
+        responseKind: 'json',
+      };
+    case 'camofox_pay_disarm':
+      return {
+        method: 'DELETE',
+        path: `/agentcard/tabs/${encodeURIComponent(args.tabId)}/payment/${encodeURIComponent(args.attachmentId)}?${new URLSearchParams({ userId })}`,
+        auth: 'accessKey',
+        responseKind: 'json',
+      };
+    case 'agentcard_enrol':
+      return {
+        method: 'POST',
+        path: '/agentcard/vault/enrol',
+        auth: 'accessKey',
+        responseKind: 'json',
+        body: { userId, addAnother: args.addAnother === true },
+      };
+    case 'agentcard_cards':
+      return {
+        method: 'GET',
+        path: `/agentcard/vault/cards?${new URLSearchParams({ userId })}`,
+        auth: 'accessKey',
+        responseKind: 'json',
+      };
+    case 'agentcard_buy': {
+      const body = { userId };
+      for (const key of ['ask', 'threadId', 'confirm', 'new_order', 'product_id', 'store_id']) {
+        if (args[key] !== undefined) body[key] = args[key];
+      }
+      return { method: 'POST', path: '/agentcard/commerce/buy', auth: 'accessKey', responseKind: 'json', body };
+    }
+    case 'agentcard_merchants': {
+      const params = new URLSearchParams({ userId });
+      for (const key of ['kind', 'q', 'limit', 'cursor']) {
+        if (args[key] !== undefined && args[key] !== '') params.set(key, String(args[key]));
+      }
+      return { method: 'GET', path: `/agentcard/merchants?${params}`, auth: 'accessKey', responseKind: 'json' };
+    }
+    case 'agentcard_presets_list':
+      return {
+        method: 'GET',
+        path: `/agentcard/presets?${new URLSearchParams({ userId })}`,
+        auth: 'accessKey',
+        responseKind: 'json',
+      };
+    case 'agentcard_preset_set':
+      return {
+        method: 'PUT',
+        path: `/agentcard/presets/${encodeURIComponent(args.label)}`,
+        auth: 'accessKey',
+        responseKind: 'json',
+        body: { userId, rules: args.rules },
+      };
+    case 'agentcard_preset_attach':
+      return {
+        method: 'POST',
+        path: `/agentcard/presets/${encodeURIComponent(args.label)}/attach`,
+        auth: 'accessKey',
+        responseKind: 'json',
+        body: { userId, cardId: args.cardId },
+      };
     default:
       throw new Error(`Unknown tool: ${name}`);
   }

@@ -114,6 +114,54 @@
       {
         "name": "camofox_import_cookies",
         "description": "Import Netscape cookie file (requires CAMOFOX_API_KEY)"
+      },
+      {
+        "name": "camofox_handoff_start",
+        "description": "Hand a tab to the human for a login, a CAPTCHA or a check"
+      },
+      {
+        "name": "camofox_handoff_release",
+        "description": "Return control of a tab to the agent after a handoff."
+      },
+      {
+        "name": "camofox_pay_arm",
+        "description": "Pay on this tab with the user's own card"
+      },
+      {
+        "name": "camofox_pay_status",
+        "description": "Read a payment attachment"
+      },
+      {
+        "name": "camofox_pay_disarm",
+        "description": "Stop paying on a tab"
+      },
+      {
+        "name": "agentcard_enrol",
+        "description": "Start storing the user's card with AgentCard"
+      },
+      {
+        "name": "agentcard_cards",
+        "description": "List the cards stored for this user (brand, last4, expiry)"
+      },
+      {
+        "name": "agentcard_buy",
+        "description": "Shop for the user at real stores through AgentCard: products, food delivery, table reservations (action reserve) and fli"
+      },
+      {
+        "name": "agentcard_merchants",
+        "description": "Check whether AgentCard can pay at a store before sending the user there"
+      },
+      {
+        "name": "agentcard_presets_list",
+        "description": "List this user's spending rules (presets)"
+      },
+      {
+        "name": "agentcard_preset_set",
+        "description": "Create or change one of the user's spending rules"
+      },
+      {
+        "name": "agentcard_preset_attach",
+        "description": "Attach one of the user's spending rules to one of their cards (default: the first card)."
       }
     ]
   },
@@ -136,6 +184,7 @@
     "fetch-bin": "node lib/camoufox-download.js"
   },
   "dependencies": {
+    "@agent-cards/commerce-sdk": "0.20.0",
     "@agent-cards/sdk": "0.24.1",
     "better-sqlite3": "13.0.1",
     "camoufox-js": "0.11.5",

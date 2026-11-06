@@ -2,7 +2,7 @@
 
 A standalone [Model Context Protocol](https://modelcontextprotocol.io) server that exposes camofox-browser to any MCP-compatible host — Claude Code, Cursor, etc. — without requiring OpenClaw.
 
-It mirrors the existing OpenClaw plugin **1:1**: same 11 tool names, identical JSON-Schema parameters, and the same REST routes. Whether an agent reaches camofox via OpenClaw or MCP, the behavior is identical.
+It mirrors the existing OpenClaw plugin **1:1**: same 23 tool names, identical JSON-Schema parameters, and the same REST routes. Whether an agent reaches camofox via OpenClaw or MCP, the behavior is identical.
 
 The initial MCP server implementation was contributed by [@epicsagas](https://github.com/epicsagas).
 
@@ -170,7 +170,7 @@ claude mcp add camofox-browser -- node /Users/you/src/camofox-browser/mcp/server
 | Cursor | Settings → MCP — server shows green |
 | opencode | `opencode mcp list` |
 
-You should see 11 tools: `camofox_create_tab`, `camofox_snapshot`, `camofox_click`, `camofox_type`, `camofox_navigate`, `camofox_scroll`, `camofox_screenshot`, `camofox_evaluate`, `camofox_list_tabs`, `camofox_close_tab`, `camofox_import_cookies`.
+You should see 23 tools: the 11 browser tools (`camofox_create_tab`, `camofox_snapshot`, `camofox_click`, `camofox_type`, `camofox_navigate`, `camofox_scroll`, `camofox_screenshot`, `camofox_evaluate`, `camofox_list_tabs`, `camofox_close_tab`, `camofox_import_cookies`), two handoff tools (`camofox_handoff_start`, `camofox_handoff_release`), three payment tools (`camofox_pay_arm`, `camofox_pay_status`, `camofox_pay_disarm`), and seven AgentCard tools (`agentcard_enrol`, `agentcard_cards`, `agentcard_buy`, `agentcard_merchants`, `agentcard_presets_list`, `agentcard_preset_set`, `agentcard_preset_attach`). The user id comes from `CAMOFOX_USER_ID`, never from the model.
 
 ## Tools
 
