@@ -126,7 +126,19 @@
       "camofox_close_tab",
       "camofox_evaluate",
       "camofox_list_tabs",
-      "camofox_import_cookies"
+      "camofox_import_cookies",
+      "camofox_handoff_start",
+      "camofox_handoff_release",
+      "camofox_pay_arm",
+      "camofox_pay_status",
+      "camofox_pay_disarm",
+      "agentcard_enrol",
+      "agentcard_cards",
+      "agentcard_buy",
+      "agentcard_merchants",
+      "agentcard_presets_list",
+      "agentcard_preset_set",
+      "agentcard_preset_attach"
     ]
   }
 }

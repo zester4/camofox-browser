@@ -79,6 +79,7 @@ agentcard/
     http.test.js, persistence.test.js, payments.test.js, commerce.test.js
   scripts/
     sandbox-check.mjs live check (sandbox credentials)
+    camoufox-pay-check.mjs payment on Firefox (Camoufox), no Chromium. --engine-only needs no account
 ```
 
 ## Run the tests
@@ -109,6 +110,17 @@ Sandbox or production is set by the credentials. Start with sandbox. The connect
 code is `111111`, and Stripe's published test card works.
 
 Keep secrets in the environment or a secret store. Never commit them, log them or print them.
+
+## Payment on Firefox (no Chromium)
+
+```
+npm run fetch-bin                                        # once: downloads the Camoufox binary
+node agentcard/scripts/camoufox-pay-check.mjs --engine-only   # Firefox launches; a page request is paused and answered
+node agentcard/scripts/camoufox-pay-check.mjs --user camo-check  # full sandbox payment, with your approval
+```
+
+The full check opens a sandbox enrolment link, waits for the card, pays on a local checkout
+page, and prints an approval link for your device. It has not been run yet.
 
 ## Live check (sandbox only)
 
@@ -155,12 +167,11 @@ These are not fully documented. The code handles them defensively, and the live 
 - Act on webhook events, not on what the agent says.
 - `approved` and `submitted` purchases are never retried. A purchase is retried only
   after a decline, expiry or refusal, or a final unconfirmed settlement.
-- Purchase limits: `DEFAULT_MAX_AMOUNT_CENTS` is `null` (no limit) until the product owner sets one.
+- Purchase limits: decided. The app sets no cap (`DEFAULT_MAX_AMOUNT_CENTS` is `null`). Each user sets their own limits with AgentCard presets (`agentcard_preset_set`), and AgentCard enforces them before any approval.
 
 ## Not built yet
 
 - Live verification of the purchase approval path (needs a sandbox user with a card).
-- A decision on the default purchase limit (`DEFAULT_MAX_AMOUNT_CENTS`).
 - Q4 answered from the SDK's own docs: its browser attach is Chromium-only, so it is not used on Camofox. Payment on Camofox uses the interception path instead, which is unverified live.
 - Live verification of the buy tool against AgentCard's `/buy` endpoints (offline tests use an injected buy tool; the merchant check runs over HTTP against the documented shape).
 - Flight traveler details and flight cancellation. The current Commerce SDK and REST docs do not document `buy_save_traveler` or `buy_cancel_flight`, so they are not built. Flights are bought through the buy tool as `book` products.
