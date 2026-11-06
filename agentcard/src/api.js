@@ -98,12 +98,13 @@ export function createAgentCardApi({
    * @param {string} path starts with /
    * @param {{ body?: object, query?: Record<string, string>, _slowDownRetried?: boolean }} [opts]
    */
-  async function request(method, path, { body, query, _slowDownRetried = false } = {}) {
+  async function request(method, path, { body, query, root = false, _slowDownRetried = false } = {}) {
     const qs = query ? `?${new URLSearchParams(query).toString()}` : '';
+    const prefix = root ? '' : '/api/v2';
     let attempt = 0;
     for (;;) {
       const accessToken = await getToken();
-      const res = await fetchImpl(`${baseUrl}/api/v2${path}${qs}`, {
+      const res = await fetchImpl(`${baseUrl}${prefix}${path}${qs}`, {
         method,
         headers: {
           authorization: `Bearer ${accessToken}`,
@@ -120,7 +121,7 @@ export function createAgentCardApi({
       if (code === 'slow_down' && !_slowDownRetried) {
         const waitMs = Math.max(100, Number(data?.interval ?? data?.error?.interval ?? 1) * 1000);
         await sleep(waitMs);
-        return request(method, path, { body, query, _slowDownRetried: true });
+        return request(method, path, { body, query, root, _slowDownRetried: true });
       }
 
       const transient = res.status === 429 || res.status >= 500;
@@ -136,6 +137,21 @@ export function createAgentCardApi({
   }
 
   return {
+    /**
+     * GET /buy/merchants (outside /api/v2). Whether AgentCard can pay at each store.
+     * `externalUserId` adds `link_status` to direct merchants, for that shopper.
+     * @param {{ kind?: string, q?: string, limit?: number, cursor?: string, externalUserId?: string }} [opts]
+     */
+    listMerchants({ kind, q, limit, cursor, externalUserId } = {}) {
+      const query = {};
+      if (kind) query.kind = kind;
+      if (q) query.q = q;
+      if (limit !== undefined) query.limit = String(limit);
+      if (cursor) query.cursor = cursor;
+      if (externalUserId) query.external_user_id = externalUserId;
+      return request('GET', '/buy/merchants', { query, root: true });
+    },
+
     /**
      * Start a vault session. Omit both ids for an open session (new user).
      * `externalUserId` lets a returning user unlock their vault with a passkey.

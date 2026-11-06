@@ -58,7 +58,7 @@ export function sendAgentCardError(res, err, log = () => {}) {
  *   log?: (level: string, msg: string, fields?: object) => void,
  * }} deps
  */
-export function createHttpHandlers({ vault, checkout, account, webhooks, log = () => {} }) {
+export function createHttpHandlers({ vault, checkout, account, webhooks, log = () => {}, commerce = null }) {
   /** Wrap a handler so that user checks and errors are handled in one place. */
   function userRoute(fn) {
     return async (req, res) => {
@@ -159,6 +159,35 @@ export function createHttpHandlers({ vault, checkout, account, webhooks, log = (
     setPreset: userRoute(async (req, res, userId) => {
       res.json(await account.setPreset(userId, req.params.label, req.body?.rules ?? req.body ?? {}));
     }),
+
+    /** POST /agentcard/commerce/buy: one buy call for the user. The backend supplies userId, never the model. */
+    buy: userRoute(async (req, res, userId) => {
+      const { userId: _ignored, ...body } = req.body ?? {};
+      const result = await commerce.buy(userId, { ...body, threadId: req.body?.threadId });
+      res.json(result);
+    }),
+
+    /** GET /agentcard/commerce/tool: the buy tool's definition, for the backend's model. */
+    buyDefinition: (req, res) => {
+      res.json(commerce.definition());
+    },
+
+    /** GET /agentcard/merchants: can AgentCard pay at a store. userId is optional (adds link_status). */
+    merchants: async (req, res) => {
+      try {
+        const q = req.query ?? {};
+        const result = await commerce.merchants({
+          userId: typeof q.userId === 'string' && q.userId.trim() ? q.userId.trim() : undefined,
+          kind: q.kind,
+          q: q.q,
+          limit: q.limit,
+          cursor: q.cursor,
+        });
+        res.json(result);
+      } catch (err) {
+        sendError(res, err, log);
+      }
+    },
 
     /** GET /agentcard/presets */
     listPresets: userRoute(async (req, res, userId) => {

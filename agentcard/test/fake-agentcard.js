@@ -12,6 +12,12 @@ import { createHmac } from 'node:crypto';
 
 export const FAKE_CLIENT = { id: 'cli_test', secret: 'sec_test' };
 
+const MERCHANTS = [
+  { kind: 'direct', slug: 'doordash', name: 'DoorDash', domain: 'doordash.com', buys_through: 'doordash', supported: true, supported_reason: 'pay_proven', supported_detail: null, supported_read_at: '2026-11-01T00:00:00Z', countries: ['US'] },
+  { kind: 'direct', slug: 'opentable', name: 'OpenTable', domain: 'opentable.com', buys_through: 'opentable', supported: null, supported_reason: 'unreached', supported_detail: null, supported_read_at: null, countries: ['US'] },
+  { kind: 'catalog', slug: 'walmart', name: 'Walmart', domain: 'walmart.com', buys_through: 'agentcard', supported: false, supported_reason: 'gate_refused', supported_detail: 'refused at checkout', supported_read_at: '2026-11-01T00:00:00Z', countries: ['US'] },
+];
+
 export function createFakeAgentCard({ webhookSecret = 'whsec_test', tokenLifetimeSeconds = 3600, mode = 'sandbox' } = {}) {
   let tokenSeq = 0;
   let idSeq = 0;
@@ -251,6 +257,25 @@ export function createFakeAgentCard({ webhookSecret = 'whsec_test', tokenLifetim
     }
     const secretMatch = path.match(/^\/api\/v2\/webhook_endpoints\/([^/]+)\/secret$/);
     if (method === 'GET' && secretMatch) return json(200, { id: secretMatch[1], secret: webhookSecret });
+
+    if (method === 'GET' && path === '/buy/merchants') {
+      // Documented shape: merchants[], next_cursor, counts. `link_status` appears only
+      // for direct merchants when external_user_id is passed.
+      const q = (url.searchParams.get('q') ?? '').toLowerCase();
+      const kind = url.searchParams.get('kind');
+      const externalUserId = url.searchParams.get('external_user_id');
+      const limit = Math.min(Number(url.searchParams.get('limit') ?? 50), 100);
+      let rows = MERCHANTS.filter((m) => (!q || m.name.toLowerCase().includes(q) || m.domain?.includes(q))
+        && (!kind || m.kind === kind));
+      rows = rows.slice(0, limit).map((m) => {
+        const out = { ...m };
+        if (externalUserId && m.kind === 'direct') {
+          out.link_status = externalUserId === 'user-linked' ? 'linked' : 'not_linked';
+        }
+        return out;
+      });
+      return json(200, { merchants: rows, next_cursor: null, counts: { direct: rows.filter((m) => m.kind === 'direct').length, catalog: rows.filter((m) => m.kind === 'catalog').length } });
+    }
 
     return json(404, { error: { code: 'not_found', message: `No route for ${method} ${path}` } });
   }

@@ -21,6 +21,7 @@ import { createHttpHandlers } from './http.js';
 import { loadConfig, requireCredentials, describeConfig } from './config.js';
 import { createAccount } from './account.js';
 import { attachInterception, toRegistry } from './interception.js';
+import { createCommerce } from './commerce.js';
 
 /** Events this integration subscribes to when its endpoint is registered. */
 export const SUBSCRIBED_EVENTS = [
@@ -37,7 +38,7 @@ const API_METHODS = [
   'createPreparation', 'getPreparation', 'cancelPreparation',
   'createAuthorization', 'getAuthorization', 'cancelAuthorization', 'reportOutcome',
   'listRecognizers', 'putPreset', 'getPreset', 'listPresets', 'deletePreset', 'attachPreset',
-  'createWebhookEndpoint', 'getWebhookSecret',
+  'createWebhookEndpoint', 'getWebhookSecret', 'listMerchants',
 ];
 
 /**
@@ -111,6 +112,14 @@ export function createAgentCardService(options) {
 
   const account = createAccount({ api: lazyApi, store, vault, log });
 
+  const commerce = createCommerce({
+    ensureConfigured: () => requireCredentials(config),
+    config,
+    fetchImpl: options.fetchImpl,
+    api: lazyApi,
+    log,
+  });
+
   // The processor list changes rarely. Cache it briefly; a failed fetch is not cached.
   let registryCache = null;
   let registryAt = 0;
@@ -130,7 +139,8 @@ export function createAgentCardService(options) {
     vault,
     checkout,
     webhooks,
-    handlers: createHttpHandlers({ vault, checkout, account, webhooks, log }),
+    commerce,
+    handlers: createHttpHandlers({ vault, checkout, account, webhooks, log, commerce }),
 
     /** Register this app's webhook endpoint. Run once per environment; the secret is shown once. */
     registerWebhookEndpoint({ url, description }) {
