@@ -128,6 +128,9 @@ async function main() {
       if (!/api\.stripe\.com/.test(r.url())) return;
       const keys = [...new URLSearchParams(r.postData() ?? '').keys()];
       console.log(`      store sends ${r.method()} ${new URL(r.url()).pathname} with fields: ${keys.join(', ') || '(none)'}`);
+      // The publishable key is public (every visitor's browser has it). Printed so the fixture can send it.
+      const pk = new URLSearchParams(r.postData() ?? '').get('key');
+      if (pk && /^pk_(test|live)_/.test(pk)) console.log(`      store publishable key (public, not a secret): ${pk}\n      add it to .env as STRIPE_PUBLISHABLE_KEY=${pk}`);
     });
     await page.goto(STORE, { waitUntil: 'domcontentloaded', timeout: 60_000 });
     check('demo store loads', (await page.locator('body').count()) > 0);
