@@ -62,10 +62,12 @@ const ENGINE_FORM = `<!doctype html><meta charset="utf-8"><title>Checkout check<
  * stored card (vault.placeholderCard): its number, security code and the card's real expiry.
  * The page's card facts must match the card that pays, or the processor refuses the request.
  */
-function checkoutHtml(card) {
+function checkoutHtml(card, publishableKey) {
   const digits = (v) => String(v ?? '').replace(/\D/g, '');
+  // Stripe.js sends the merchant's publishable key with every token request. Without it Stripe refuses.
   return `<!doctype html><meta charset="utf-8"><title>Checkout check</title>
 <form method="POST" action="https://api.stripe.com/v1/tokens">
+  <input type="hidden" name="key" value="${publishableKey}">
   <input type="hidden" name="card[number]" value="${digits(card.number)}">
   <input type="hidden" name="card[exp_month]" value="${digits(card.expiryMonth)}">
   <input type="hidden" name="card[exp_year]" value="${digits(card.expiryYear)}">
@@ -188,16 +190,20 @@ async function fullCheck() {
   const agentcardUserId = service.store.getAgentCardUser(userId);
   let placeholder;
   try {
-    // psp names the processor whose form we type into. Stripe takes its own placeholder number.
-    placeholder = await vault.placeholderCard({ user: agentcardUserId, cardId, psp: 'stripe' });
+    placeholder = await vault.placeholderCard({ user: agentcardUserId, cardId });
   } catch (err) {
     check('placeholder for the stored card', false, err.reason ?? err.message);
     return;
   }
   check('placeholder for the stored card', Boolean(placeholder?.number && placeholder?.securityCode));
 
-  // 4-5. Pay on the Firefox page.
-  const fixture = await serveFixture(checkoutHtml(placeholder));
+  // 4-5. Pay on the Firefox page. Stripe needs the merchant's publishable key (pk_test_... for sandbox).
+  const publishableKey = process.env.STRIPE_PUBLISHABLE_KEY?.trim() ?? '';
+  if (!/^pk_(test|live)_[A-Za-z0-9]+$/.test(publishableKey)) {
+    check('Stripe publishable key set (STRIPE_PUBLISHABLE_KEY in .env, pk_test_...)', false);
+    return;
+  }
+  const fixture = await serveFixture(checkoutHtml(placeholder, publishableKey));
   const url = `http://127.0.0.1:${fixture.address().port}/`;
   let browser;
   try {
