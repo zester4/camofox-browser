@@ -122,6 +122,13 @@ async function main() {
     browser = await launchFirefox();
     check('Firefox (Camoufox) launches', true, `version ${browser.version()}`);
     const page = await browser.newPage();
+    // Field NAMES of the processor requests the store's own page sends (never the values), so the
+    // fixture page can send the same fields.
+    page.on('request', (r) => {
+      if (!/api\.stripe\.com/.test(r.url())) return;
+      const keys = [...new URLSearchParams(r.postData() ?? '').keys()];
+      console.log(`      store sends ${r.method()} ${new URL(r.url()).pathname} with fields: ${keys.join(', ') || '(none)'}`);
+    });
     await page.goto(STORE, { waitUntil: 'domcontentloaded', timeout: 60_000 });
     check('demo store loads', (await page.locator('body').count()) > 0);
 
