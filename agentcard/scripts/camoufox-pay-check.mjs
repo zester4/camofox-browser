@@ -184,9 +184,11 @@ async function fullCheck() {
     clientSecret,
     ...(process.env.AGENTCARD_BASE_URL ? { baseUrl: process.env.AGENTCARD_BASE_URL } : {}),
   });
+  // The SDK takes AgentCard's user id (usr_...), not our external id. The store maps one to the other.
+  const agentcardUserId = service.store.getAgentCardUser(userId);
   let placeholder;
   try {
-    placeholder = await vault.placeholderCard({ user: userId, cardId });
+    placeholder = await vault.placeholderCard({ user: agentcardUserId, cardId });
   } catch (err) {
     check('placeholder for the stored card', false, err.reason ?? err.message);
     return;
