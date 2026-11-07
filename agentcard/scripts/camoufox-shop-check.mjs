@@ -18,7 +18,6 @@ import { loadEnvFile } from 'node:process';
 import { firefox } from 'playwright-core';
 import { Camoufox, launchOptions } from 'camoufox-js';
 import { createAgentCardService } from '../src/index.js';
-import { VaultClient } from '@agent-cards/sdk';
 
 const ENV_PATH = resolve(process.cwd(), '.env');
 if (existsSync(ENV_PATH)) loadEnvFile(ENV_PATH);
@@ -103,16 +102,11 @@ async function main() {
 
   // The placeholder for the card that pays: the test number, CVC and real expiry the page types.
   const cardId = cards.cards[0].cardId;
-  const vault = new VaultClient({
-    clientId,
-    clientSecret,
-    ...(process.env.AGENTCARD_BASE_URL ? { baseUrl: process.env.AGENTCARD_BASE_URL } : {}),
-  });
   let card;
   try {
-    card = await vault.placeholderCard({ user: service.store.getAgentCardUser(userId), cardId });
+    card = await service.placeholders.get(userId, cardId);
   } catch (err) {
-    check('placeholder for the stored card', false, err.reason ?? err.message);
+    check('placeholder for the stored card', false, err.code ?? err.message);
     return;
   }
   check('placeholder for the stored card', Boolean(card?.number && card?.securityCode));

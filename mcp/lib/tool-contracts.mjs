@@ -348,6 +348,18 @@ export const TOOL_DEFS = [
     },
   },
   {
+    name: 'agentcard_placeholder',
+    description:
+      'The test card to type into a checkout for one of this user\'s stored cards: the card number, security code and expiry that match the card that pays. The real card number is never returned. Use the same cardId as camofox_pay_arm.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        cardId: { type: 'string', description: 'Which stored card; omit for the first one. Pass the same cardId to camofox_pay_arm.' },
+      },
+      required: [],
+    },
+  },
+  {
     name: 'agentcard_presets_list',
     description: 'List this user\'s spending rules (presets). Limits are enforced by AgentCard before any approval.',
     inputSchema: { type: 'object', properties: {}, required: [] },
@@ -560,6 +572,13 @@ export function buildRequest(name, args, ctx) {
         auth: 'accessKey',
         responseKind: 'json',
         body: { userId, addAnother: args.addAnother === true },
+      };
+    case 'agentcard_placeholder':
+      return {
+        method: 'GET',
+        path: `/agentcard/cards/placeholder?${new URLSearchParams({ userId, ...(args.cardId ? { cardId: args.cardId } : {}) })}`,
+        auth: 'accessKey',
+        responseKind: 'json',
       };
     case 'agentcard_cards':
       return {

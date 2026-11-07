@@ -12,6 +12,7 @@ agent's `tools/` folder. Each file's first line says where it goes.
 | `camofox_pay_disarm` | `DELETE /agentcard/tabs/:tabId/payment/:attachmentId` | Stops paying on the tab |
 | `agentcard_enrol` | `POST /agentcard/vault/enrol` | Vault link to store the user's card (or `has_card`) |
 | `agentcard_cards` | `GET /agentcard/vault/cards` | Cards on file: brand, last four, expiry |
+| `agentcard_placeholder` | `GET /agentcard/cards/placeholder` | The test card to type into a checkout for a stored card (number, CVC, expiry that match the card that pays) |
 | `agentcard_buy` | `POST /agentcard/commerce/buy` | Products, food, tables (reserve), flights (book) |
 | `agentcard_merchants` | `GET /agentcard/merchants` | Whether AgentCard can pay at a store, and connection status |
 | `agentcard_presets` | `GET`, `PUT`, `POST /agentcard/presets...` | List, set and attach spending rules |
