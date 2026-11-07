@@ -62,10 +62,13 @@ const ENGINE_FORM = `<!doctype html><meta charset="utf-8"><title>Checkout check<
  * stored card (vault.placeholderCard): its number, security code and the card's real expiry.
  * The page's card facts must match the card that pays, or the processor refuses the request.
  */
-function checkoutHtml(card) {
+function checkoutHtml(card, publishableKey) {
   const digits = (v) => String(v ?? '').replace(/\D/g, '');
+  // The store's own page sends the publishable key with its token request; this page sends it when set.
+  const keyField = /^pk_(test|live)_[A-Za-z0-9]+$/.test(publishableKey ?? '') ? `<input type="hidden" name="key" value="${publishableKey}">` : '';
   return `<!doctype html><meta charset="utf-8"><title>Checkout check</title>
 <form method="POST" action="https://api.stripe.com/v1/tokens">
+  ${keyField}
   <input type="hidden" name="card[number]" value="${digits(card.number)}">
   <input type="hidden" name="card[exp_month]" value="${digits(card.expiryMonth)}">
   <input type="hidden" name="card[exp_year]" value="${digits(card.expiryYear)}">
@@ -196,7 +199,7 @@ async function fullCheck() {
   check('placeholder for the stored card', Boolean(placeholder?.number && placeholder?.securityCode));
 
   // 4-5. Pay on the Firefox page with the placeholder card, as the integration doc describes.
-  const fixture = await serveFixture(checkoutHtml(placeholder));
+  const fixture = await serveFixture(checkoutHtml(placeholder, process.env.STRIPE_PUBLISHABLE_KEY?.trim()));
   const url = `http://127.0.0.1:${fixture.address().port}/`;
   let browser;
   try {
