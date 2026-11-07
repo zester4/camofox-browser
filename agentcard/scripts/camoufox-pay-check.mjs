@@ -26,7 +26,6 @@ import { loadEnvFile } from 'node:process';
 import { firefox } from 'playwright-core';
 import { Camoufox, launchOptions } from 'camoufox-js';
 import { createAgentCardService } from '../src/index.js';
-import { VaultClient } from '@agent-cards/sdk';
 
 const ENV_PATH = resolve(process.cwd(), '.env');
 if (existsSync(ENV_PATH)) loadEnvFile(ENV_PATH);
@@ -182,18 +181,11 @@ async function fullCheck() {
 
   // 3. The processor's placeholder for the stored card that pays. The page must show these facts.
   const cardId = cards.cards[0].cardId;
-  const vault = new VaultClient({
-    clientId,
-    clientSecret,
-    ...(process.env.AGENTCARD_BASE_URL ? { baseUrl: process.env.AGENTCARD_BASE_URL } : {}),
-  });
-  // The SDK takes AgentCard's user id (usr_...), not our external id. The store maps one to the other.
-  const agentcardUserId = service.store.getAgentCardUser(userId);
   let placeholder;
   try {
-    placeholder = await vault.placeholderCard({ user: agentcardUserId, cardId });
+    placeholder = await service.placeholders.get(userId, cardId);
   } catch (err) {
-    check('placeholder for the stored card', false, err.reason ?? err.message);
+    check('placeholder for the stored card', false, err.code ?? err.message);
     return;
   }
   check('placeholder for the stored card', Boolean(placeholder?.number && placeholder?.securityCode));

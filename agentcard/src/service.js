@@ -22,6 +22,7 @@ import { loadConfig, requireCredentials, describeConfig } from './config.js';
 import { createAccount } from './account.js';
 import { attachInterception, toRegistry } from './interception.js';
 import { createCommerce } from './commerce.js';
+import { createPlaceholders } from './placeholder.js';
 
 /** Events this integration subscribes to when its endpoint is registered. */
 export const SUBSCRIBED_EVENTS = [
@@ -112,6 +113,12 @@ export function createAgentCardService(options) {
 
   const account = createAccount({ api: lazyApi, store, vault, log });
 
+  const placeholders = createPlaceholders({
+    config,
+    store,
+    ensureConfigured: () => requireCredentials(config),
+  });
+
   const commerce = createCommerce({
     ensureConfigured: () => requireCredentials(config),
     config,
@@ -140,7 +147,8 @@ export function createAgentCardService(options) {
     checkout,
     webhooks,
     commerce,
-    handlers: createHttpHandlers({ vault, checkout, account, webhooks, log, commerce }),
+    placeholders,
+    handlers: createHttpHandlers({ vault, checkout, account, webhooks, log, commerce, placeholders }),
 
     /** Register this app's webhook endpoint. Run once per environment; the secret is shown once. */
     registerWebhookEndpoint({ url, description }) {

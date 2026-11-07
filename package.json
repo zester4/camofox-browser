@@ -144,6 +144,10 @@
         "description": "List the cards stored for this user (brand, last4, expiry)"
       },
       {
+        "name": "agentcard_placeholder",
+        "description": "The test card to type into a checkout for a stored card (number, security code, expiry that match the card that pays)"
+      },
+      {
         "name": "agentcard_buy",
         "description": "Shop for the user at real stores through AgentCard: products, food delivery, table reservations (action reserve) and fli"
       },

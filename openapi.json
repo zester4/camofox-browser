@@ -593,6 +593,106 @@
         }
       }
     },
+    "/agentcard/cards/placeholder": {
+      "get": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "The placeholder card the agent types into a checkout for one stored card",
+        "description": "A documented test number of the card's network, a placeholder security code and the stored card's real expiry. The page's card facts must match the card that pays. The card number itself never leaves the vault.\n",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cardId",
+            "in": "query",
+            "required": false,
+            "description": "A stored card's id. Omit for the first card on file.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The placeholder to type.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "cardId": {
+                      "type": "string"
+                    },
+                    "brand": {
+                      "type": "string"
+                    },
+                    "number": {
+                      "type": "string"
+                    },
+                    "securityCode": {
+                      "type": "string"
+                    },
+                    "expiryMonth": {
+                      "type": "string"
+                    },
+                    "expiryYear": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "userId or cardId invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such card for this user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "This user has no card on file.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "AgentCard has no placeholder for this card's network, or its expiry is unknown.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/agentcard/purchases": {
       "post": {
         "tags": [

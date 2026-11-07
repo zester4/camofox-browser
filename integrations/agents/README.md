@@ -62,7 +62,7 @@ written in plain text on a shared machine.
 
 - Browser: the 11 existing tools, plus `camofox_handoff_start` and `camofox_handoff_release`.
 - Payments: `camofox_pay_arm`, `camofox_pay_status`, `camofox_pay_disarm`.
-- AgentCard: `agentcard_enrol`, `agentcard_cards`, `agentcard_buy`, `agentcard_merchants`,
+- AgentCard: `agentcard_enrol`, `agentcard_cards`, `agentcard_placeholder`, `agentcard_buy`, `agentcard_merchants`,
   `agentcard_presets_list`, `agentcard_preset_set`, `agentcard_preset_attach`.
 
 Not exposed as tools, on purpose: the raw purchase request (it needs the processor's own

@@ -19,6 +19,7 @@ const STATUS_BY_CODE = {
   not_enrolled: 409,
   no_card: 409,
   card_not_found: 404,
+  placeholder_unavailable: 422,
   over_limit: 422,
   outcome_not_reportable: 409,
   not_configured: 503,
@@ -58,7 +59,7 @@ export function sendAgentCardError(res, err, log = () => {}) {
  *   log?: (level: string, msg: string, fields?: object) => void,
  * }} deps
  */
-export function createHttpHandlers({ vault, checkout, account, webhooks, log = () => {}, commerce = null }) {
+export function createHttpHandlers({ vault, checkout, account, webhooks, log = () => {}, commerce = null, placeholders = null }) {
   /** Wrap a handler so that user checks and errors are handled in one place. */
   function userRoute(fn) {
     return async (req, res) => {
@@ -171,6 +172,12 @@ export function createHttpHandlers({ vault, checkout, account, webhooks, log = (
     buyDefinition: (req, res) => {
       res.json(commerce.definition());
     },
+
+    /** GET /agentcard/cards/placeholder?userId=&cardId=  the test card the agent types for a stored card */
+    placeholder: userRoute(async (req, res, userId) => {
+      const cardId = typeof req.query?.cardId === 'string' ? req.query.cardId : undefined;
+      res.json(await placeholders.get(userId, cardId));
+    }),
 
     /** GET /agentcard/merchants: can AgentCard pay at a store. userId is optional (adds link_status). */
     merchants: async (req, res) => {
