@@ -4,6 +4,7 @@
  *
  *   node agentcard/scripts/camoufox-pay-check.mjs --engine-only
  *   node agentcard/scripts/camoufox-pay-check.mjs --user camo-check     # full payment, sandbox
+ *   node agentcard/scripts/camoufox-pay-check.mjs --user camo-check --add-card   # add a card on this device
  *
  * Needs the Camoufox binary: run `npm run fetch-bin` once (it downloads from GitHub).
  * --engine-only needs no AgentCard account. It checks that Firefox launches and that
@@ -118,6 +119,26 @@ async function fullCheck() {
     stateFile: null,
     log: (level, msg, fields) => { if (level !== 'debug') console.log(`      log ${level}: ${msg}`); },
   });
+
+  // --add-card: store another card on THIS device. Approval needs the card on the device that approves.
+  if (args.includes('--add-card')) {
+    const added = await service.vault.start(userId, { addAnother: true });
+    if (added.status !== 'link') {
+      check('add a card link', false, `status ${added.status}`);
+      return;
+    }
+    console.log(`      open this link ON THIS DEVICE, connect code 111111, add the test card with your passkey:\n      ${added.url}`);
+    const before = (await service.vault.listCards(userId)).cards.length;
+    const deadline = Date.now() + 10 * 60_000;
+    while (Date.now() < deadline) {
+      const status = await service.vault.poll(userId, added.sessionId);
+      if (status.status === 'linked') break;
+      await new Promise((r) => setTimeout(r, 3000));
+    }
+    const after = (await service.vault.listCards(userId)).cards.length;
+    check('card added to the vault', after > before, `${after} card(s)`);
+    return;
+  }
 
   // 1-2. Enrol the user and wait for the card. The connect code is 111111 in sandbox.
   const started = await service.vault.start(userId);
