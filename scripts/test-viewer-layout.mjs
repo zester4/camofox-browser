@@ -60,7 +60,7 @@ async function run(label, viewport, withHandoff) {
   check(`${tag}: frame fills viewer`, m.frame && Math.abs(m.frame.w - m.innerW) < 1 && Math.abs(m.frame.h - m.innerH) < 1, JSON.stringify(m.frame));
   check(`${tag}: one Open control only`, !!m.open === withHandoff, withHandoff ? 'open shown during handoff' : 'open hidden');
   check(`${tag}: Done only during handoff`, !!m.done === withHandoff);
-  check(`${tag}: no visible text except label`, m.bodyText.replace(/Open\s*↗|Done|⤢|–|Your turn|\s+/g, '') === '', JSON.stringify(m.bodyText));
+  check(`${tag}: no visible text except label`, m.bodyText.replace(/Open|Done|Your turn|\s+/g, '') === '', JSON.stringify(m.bodyText));
   check(`${tag}: toolbar is small`, m.bar && m.bar.h <= 34, `bar h=${m.bar && m.bar.h}`);
   if (m.done) check(`${tag}: Done button not huge`, m.done.h <= 28, `done h=${m.done.h}`);
   check(`${tag}: page background transparent`, m.bodyBg === 'rgba(0, 0, 0, 0)', m.bodyBg);

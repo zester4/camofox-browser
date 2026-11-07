@@ -28,7 +28,7 @@
   #bar {
     position: absolute; top: 8px; right: 8px; z-index: 2;
     display: flex; align-items: center; gap: 2px;
-    height: 32px; padding: 0 4px 0 10px;
+    height: 28px; padding: 0 3px 0 9px;
     border: 1px solid var(--line); border-radius: 999px;
     background: var(--chip); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
   }
@@ -38,8 +38,9 @@
   #label { font-size: 12px; white-space: nowrap; margin-right: 4px; }
   #label:empty { display: none; }
 
+  .ic { width: 14px; height: 14px; flex: none; }
   .btn {
-    font: inherit; font-size: 12px; height: 26px; min-width: 26px; padding: 0 9px;
+    font: inherit; font-size: 12px; height: 22px; min-width: 22px; padding: 0 7px;
     border: 0; border-radius: 999px; background: transparent; color: var(--fg);
     display: inline-flex; align-items: center; justify-content: center; text-decoration: none; cursor: pointer;
   }
@@ -48,10 +49,11 @@
   .btn[hidden] { display: none; }
   #done { background: var(--accent); color: #fff; font-weight: 600; }
   #done:hover { background: #3a7bc4; }
-  #expand, #min { padding: 0; width: 26px; font-size: 14px; }
+  #expand, #min { padding: 0; width: 22px; }
+  #open .ic { margin-right: 4px; }
 
   /* Minimized: only the slim bar remains. The frame is not fetched, but the handoff state still updates. */
-  #root.min { height: 48px; }
+  #root.min { height: 36px; }
   #root.min #stage { display: none; }
   #root.min #bar { top: 8px; right: 8px; }
 
@@ -73,10 +75,10 @@
   <div id="bar">
     <span id="dot" aria-hidden="true"></span>
     <span id="label" role="status" aria-live="polite"></span>
-    <a id="open" class="btn" href="#" target="_blank" rel="noopener" hidden>Open&nbsp;↗</a>
+    <a id="open" class="btn" href="#" target="_blank" rel="noopener" hidden><span data-icon="open"></span>Open</a>
     <button id="done" class="btn" type="button" hidden>Done</button>
-    <button id="expand" class="btn" type="button" aria-label="Expand live view" aria-pressed="false">⤢</button>
-    <button id="min" class="btn" type="button" aria-label="Minimize live view">–</button>
+    <button id="expand" class="btn" type="button" aria-label="Expand live view" aria-pressed="false"><span data-icon="expand"></span></button>
+    <button id="min" class="btn" type="button" aria-label="Minimize live view"><span data-icon="minus"></span></button>
   </div>
   <textarea id="kbd" aria-hidden="true" tabindex="-1" autocomplete="off" autocapitalize="off" spellcheck="false" style="position:fixed;left:0;bottom:0;width:1px;height:1px;opacity:0;border:0;padding:0"></textarea>
 </div>
@@ -90,6 +92,17 @@
   var expandBtn = document.getElementById('expand');
   var minBtn = document.getElementById('min');
   var kbd = document.getElementById('kbd');
+
+  // Icons from Lucide (lucide-static 1.70.0, ISC license), drawn inline so the viewer needs no library.
+  var SVG_OPEN = '<path d="M15 3h6v6" /><path d="M10 14 21 3" /><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />';
+  var SVG_EXPAND = '<path d="M15 3h6v6" /><path d="m21 3-7 7" /><path d="m3 21 7-7" /><path d="M9 21H3v-6" />';
+  var SVG_COLLAPSE = '<path d="m14 10 7-7" /><path d="M20 10h-6V4" /><path d="m3 21 7-7" /><path d="M4 14h6v6" />';
+  var SVG_MINUS = '<path d="M5 12h14" />';
+  var SVG_SQUARE = '<rect width="18" height="18" x="3" y="3" rx="2" />';
+  function setIcon(el, paths) {
+    el.innerHTML = '<svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + paths + '</svg>';
+  }
+  setIcon(openLink.querySelector('[data-icon]'), SVG_OPEN);
 
   var canControl = false;
   var controlActive = false;
@@ -120,8 +133,14 @@
     openLink.hidden = !controlActive;
     expandBtn.hidden = minimized;
     expandBtn.setAttribute('aria-pressed', String(expandedMode));
-    minBtn.textContent = minimized ? '▢' : '–';
+    expandBtn.setAttribute('aria-label', expandedMode ? 'Exit full view' : 'Expand live view');
+    setIcon(expandBtn.querySelector('[data-icon]'), expandedMode ? SVG_COLLAPSE : SVG_EXPAND);
+    setIcon(minBtn.querySelector('[data-icon]'), minimized ? SVG_SQUARE : SVG_MINUS);
     minBtn.setAttribute('aria-label', minimized ? 'Restore live view' : 'Minimize live view');
+    // The host sizes this frame, so ask it to collapse to the bar when minimized (or restore).
+    try {
+      window.parent.postMessage({ source: 'camofox-live-viewer', type: 'resize', minimized: minimized }, '*');
+    } catch (err) { /* not embedded */ }
 
     var text = '';
     if (status === 'expired') text = 'Link expired';
