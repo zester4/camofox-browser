@@ -26,6 +26,7 @@ import { loadEnvFile } from 'node:process';
 import { firefox } from 'playwright-core';
 import { Camoufox, launchOptions } from 'camoufox-js';
 import { createAgentCardService } from '../src/index.js';
+import { VaultClient } from '@agent-cards/sdk';
 
 const ENV_PATH = resolve(process.cwd(), '.env');
 if (existsSync(ENV_PATH)) loadEnvFile(ENV_PATH);
@@ -46,8 +47,8 @@ function check(name, ok, detail = '') {
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? `  (${detail})` : ''}`);
 }
 
-/** A checkout page with a real form post to Stripe's token endpoint (no CORS, no preflight). */
-const CHECKOUT = `<!doctype html><meta charset="utf-8"><title>Checkout check</title>
+/** Engine check only: a local form, never sent to a processor. */
+const ENGINE_FORM = `<!doctype html><meta charset="utf-8"><title>Checkout check</title>
 <form method="POST" action="https://api.stripe.com/v1/tokens">
   <input type="hidden" name="card[number]" value="4242424242424242">
   <input type="hidden" name="card[exp_month]" value="12">
@@ -56,11 +57,28 @@ const CHECKOUT = `<!doctype html><meta charset="utf-8"><title>Checkout check</ti
   <button id="pay" type="submit">Pay</button>
 </form>`;
 
-function serveFixture() {
+/**
+ * The checkout page for the full check. The agent types the processor's placeholder for the
+ * stored card (vault.placeholderCard): its number, security code and the card's real expiry.
+ * The page's card facts must match the card that pays, or the processor refuses the request.
+ */
+function checkoutHtml(card) {
+  const digits = (v) => String(v ?? '').replace(/\D/g, '');
+  return `<!doctype html><meta charset="utf-8"><title>Checkout check</title>
+<form method="POST" action="https://api.stripe.com/v1/tokens">
+  <input type="hidden" name="card[number]" value="${digits(card.number)}">
+  <input type="hidden" name="card[exp_month]" value="${digits(card.expiryMonth)}">
+  <input type="hidden" name="card[exp_year]" value="${digits(card.expiryYear)}">
+  <input type="hidden" name="card[cvc]" value="${digits(card.securityCode)}">
+  <button id="pay" type="submit">Pay</button>
+</form>`;
+}
+
+function serveFixture(html = ENGINE_FORM) {
   return new Promise((resolveServer) => {
     const server = createServer((req, res) => {
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-      res.end(CHECKOUT);
+      res.end(html);
     });
     server.listen(0, '127.0.0.1', () => resolveServer(server));
   });
@@ -159,8 +177,24 @@ async function fullCheck() {
   check('card on file for the user', cards.enrolled && cards.cards.length > 0, `${cards.cards.length} card(s)`);
   if (!cards.enrolled || cards.cards.length === 0) return;
 
-  // 3-5. Pay on the Firefox page.
-  const fixture = await serveFixture();
+  // 3. The processor's placeholder for the stored card that pays. The page must show these facts.
+  const cardId = cards.cards[0].cardId;
+  const vault = new VaultClient({
+    clientId,
+    clientSecret,
+    ...(process.env.AGENTCARD_BASE_URL ? { baseUrl: process.env.AGENTCARD_BASE_URL } : {}),
+  });
+  let placeholder;
+  try {
+    placeholder = await vault.placeholderCard({ user: userId, cardId });
+  } catch (err) {
+    check('placeholder for the stored card', false, err.reason ?? err.message);
+    return;
+  }
+  check('placeholder for the stored card', Boolean(placeholder?.number && placeholder?.securityCode));
+
+  // 4-5. Pay on the Firefox page.
+  const fixture = await serveFixture(checkoutHtml(placeholder));
   const url = `http://127.0.0.1:${fixture.address().port}/`;
   let browser;
   try {
@@ -171,6 +205,7 @@ async function fullCheck() {
     let approvalUrl = null;
     const handle = await service.attachPayment(page, {
       userId,
+      cardId,
       merchant: 'Camofox payment check',
       amount: 100,
       currency: 'usd',
@@ -192,7 +227,15 @@ async function fullCheck() {
     const body = await page.evaluate(() => document.body?.innerText ?? '').catch(() => '');
     const got = body.includes('"id"') && /tok_/.test(body);
     check('page receives AgentCard\'s answer after approval', got, got ? 'token returned' : 'no token seen');
-    check('no card number appears on the page', !/4242424242424242/.test(body));
+    check('no full card number appears on the page', !/\b\d{13,19}\b/.test(body));
+    if (!got) {
+      // Show the processor's answer with digits and tokens masked, so the reason is visible without secrets.
+      const shown = body.replace(/\d{6,}/g, '#').replace(/tok_\w+/g, 'tok_[redacted]').slice(0, 300);
+      console.log(`      page says: ${shown.replace(/\s+/g, ' ').trim() || '(empty)'}`);
+      const outcome = typeof handle.results === 'function' ? handle.results() : [];
+      const redact = (k, v) => (typeof v === 'string' && (v.length > 80 || /tok_|\d{12,}/.test(v)) ? '[redacted]' : v);
+      console.log(`      purchase outcome: ${JSON.stringify(outcome, redact)}`);
+    }
     await handle.detach();
   } catch (err) {
     check('full payment check', false, err.message);
