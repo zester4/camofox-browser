@@ -188,7 +188,8 @@ async function fullCheck() {
   const agentcardUserId = service.store.getAgentCardUser(userId);
   let placeholder;
   try {
-    placeholder = await vault.placeholderCard({ user: agentcardUserId, cardId });
+    // psp names the processor whose form we type into. Stripe takes its own placeholder number.
+    placeholder = await vault.placeholderCard({ user: agentcardUserId, cardId, psp: 'stripe' });
   } catch (err) {
     check('placeholder for the stored card', false, err.reason ?? err.message);
     return;
