@@ -8,7 +8,8 @@
  * one text box, hands the tab to the person, types short strings through the viewer's input route,
  * and measures three times for each string:
  *   ack      the viewer's input request returns
- *   page     the page itself has the text (read from the page, not the picture)
+ *   page     the page itself receives the text (the page reports it back, so the server's page
+ *            evaluation is not needed; it is blocked while a handoff is active)
  *   picture  the picture the person sees changes (the frame bytes change)
  *
  * Thresholds (ms, p95) can be changed with VIEWER_ACK_P95_MS, VIEWER_PAGE_P95_MS, VIEWER_PICTURE_P95_MS.
@@ -79,30 +80,45 @@ function summary(name, values, limit) {
   check(`${name} within ${limit} ms at p95`, ok, `median ${Math.round(p50)} ms, p95 ${Math.round(p95)} ms, n=${values.length}`);
 }
 
-/** A local page: one text box that copies what is typed into the output line. */
+/**
+ * A local page with one text box. It reports to this process when it loads (with the box's position
+ * as a fraction of the window) and each time its text changes (with the text and the time received).
+ */
 function startPage() {
+  const received = new Map();   // text -> time the page reported it
+  let loadedBox = null;
   const html = `<!doctype html><meta charset="utf-8"><title>Latency</title>
 <body style="font:24px sans-serif;margin:40px">
 <input id="box" style="font:24px sans-serif;width:70%;padding:8px" autocomplete="off">
 <pre id="out" style="font:24px monospace;margin-top:24px"></pre>
 <script>
-  document.getElementById('box').addEventListener('input', function (e) {
-    document.getElementById('out').textContent = e.target.value;
+  var box = document.getElementById('box');
+  window.addEventListener('load', function () {
+    var r = box.getBoundingClientRect();
+    navigator.sendBeacon('/loaded?x=' + ((r.x + r.width / 2) / innerWidth) + '&y=' + ((r.y + r.height / 2) / innerHeight));
+  });
+  box.addEventListener('input', function () {
+    document.getElementById('out').textContent = box.value;
+    navigator.sendBeacon('/typed?text=' + encodeURIComponent(box.value));
   });
 </script></body>`;
   return new Promise((resolveServer) => {
     const server = createServer((req, res) => {
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-      res.end(html);
+      const url = new URL(req.url, 'http://127.0.0.1');
+      if (url.pathname === '/loaded') {
+        loadedBox = { x: Number(url.searchParams.get('x')), y: Number(url.searchParams.get('y')) };
+      } else if (url.pathname === '/typed') {
+        received.set(url.searchParams.get('text'), Date.now());
+      }
+      if (url.pathname === '/') {
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(html);
+      } else {
+        res.writeHead(204).end();
+      }
     });
-    server.listen(0, '127.0.0.1', () => resolveServer(server));
+    server.listen(0, '127.0.0.1', () => resolveServer({ server, received, box: () => loadedBox }));
   });
-}
-
-async function evaluate(expression) {
-  const res = await call(`/tabs/${encodeURIComponent(tabId)}/evaluate`, { method: 'POST', body: { userId, expression } });
-  const data = await json(res);
-  return data?.result ?? data?.value ?? null;
 }
 
 async function viewerFrame(token) {
@@ -110,6 +126,8 @@ async function viewerFrame(token) {
   if (!res.ok) return null;
   return Buffer.from(await res.arrayBuffer());
 }
+
+const hash = (buffer) => (buffer ? createHash('sha1').update(buffer).digest('hex') : null);
 
 async function main() {
   check('server answers', (await call('/live-viewer/view', { key: '' })).status < 500);
@@ -119,14 +137,20 @@ async function main() {
   }
 
   const page = await startPage();
-  const pageUrl = `http://127.0.0.1:${page.address().port}/`;
+  const { port } = page.server.address();
+  const pageUrl = `http://127.0.0.1:${port}/`;
   try {
     const opened = await call('/tabs', { method: 'POST', body: { userId, sessionKey, url: pageUrl } });
     tabId = (await json(opened))?.tabId ?? null;
     check('open the test page in a tab', opened.ok && typeof tabId === 'string', `HTTP ${opened.status}`);
     if (!tabId) return;
 
-    await new Promise((r) => setTimeout(r, 1500));
+    // Wait for the page to report its box position.
+    const loadDeadline = Date.now() + 15_000;
+    while (!page.box() && Date.now() < loadDeadline) await new Promise((r) => setTimeout(r, 100));
+    check('the test page loads', Boolean(page.box()));
+    if (!page.box()) return;
+
     const started = await call(`/tabs/${encodeURIComponent(tabId)}/handoff`, {
       method: 'POST',
       body: { userId, reason: 'Latency test', idleMs: 120_000 },
@@ -140,32 +164,34 @@ async function main() {
     if (!token) return;
 
     // Click the box through the viewer, as the person would.
-    const box = await evaluate(`(() => { const r = document.getElementById('box').getBoundingClientRect();
-      return { x: (r.x + r.width / 2) / innerWidth, y: (r.y + r.height / 2) / innerHeight }; })()`);
-    const clicked = await call(`/live-viewer/input?t=${encodeURIComponent(token)}`, { method: 'POST', body: { action: 'click', x: box.x, y: box.y }, key: '' });
+    const box = page.box();
+    const clicked = await call(`/live-viewer/input?t=${encodeURIComponent(token)}`, {
+      method: 'POST',
+      body: { action: 'click', x: box.x, y: box.y },
+      key: '',
+    });
     check('the person can click the box', clicked.ok, `HTTP ${clicked.status}`);
+    await new Promise((r) => setTimeout(r, 300));
 
-    // Frame cadence: how often a fresh picture is available to the viewer.
+    // Frame cadence: how often a picture is available to the viewer.
     const gaps = [];
     let last = Date.now();
-    const cadenceHashes = new Set();
+    const pictures = new Set();
     for (let i = 0; i < 20; i += 1) {
       const frame = await viewerFrame(token);
-      if (frame) cadenceHashes.add(createHash('sha1').update(frame).digest('hex'));
+      if (frame) pictures.add(hash(frame));
       gaps.push(Date.now() - last);
       last = Date.now();
     }
     const frameMs = gaps.slice(1);
-    const frameP95 = percentile(frameMs, 95);
-    console.log(`      frame requests: median ${Math.round(percentile(frameMs, 50))} ms, p95 ${Math.round(frameP95)} ms, distinct pictures ${cadenceHashes.size}`);
+    console.log(`      frame requests: median ${Math.round(percentile(frameMs, 50))} ms, p95 ${Math.round(percentile(frameMs, 95))} ms, distinct pictures ${pictures.size}`);
 
     const ack = [];
     const pageTimes = [];
     const pictureTimes = [];
     for (let i = 0; i < ROUNDS; i += 1) {
       const text = `t${i}${randomUUID().slice(0, 4)}`;
-      const before = await viewerFrame(token);
-      const beforeHash = before ? createHash('sha1').update(before).digest('hex') : null;
+      const beforeHash = hash(await viewerFrame(token));
 
       const t0 = Date.now();
       const typed = await call(`/live-viewer/input?t=${encodeURIComponent(token)}`, { method: 'POST', body: { action: 'type', text }, key: '' });
@@ -179,14 +205,8 @@ async function main() {
       let pageMs = null;
       let pictureMs = null;
       while (Date.now() - t0 < 6000 && (pageMs === null || pictureMs === null)) {
-        if (pageMs === null) {
-          const value = await evaluate(`document.getElementById('out').textContent`);
-          if (value === text) pageMs = Date.now() - t0;
-        }
-        if (pictureMs === null) {
-          const frame = await viewerFrame(token);
-          if (frame && createHash('sha1').update(frame).digest('hex') !== beforeHash) pictureMs = Date.now() - t0;
-        }
+        if (pageMs === null && page.received.has(text)) pageMs = page.received.get(text) - t0;
+        if (pictureMs === null && hash(await viewerFrame(token)) !== beforeHash) pictureMs = Date.now() - t0;
         await new Promise((r) => setTimeout(r, 15));
       }
       if (pageMs !== null) pageTimes.push(pageMs);
@@ -201,7 +221,7 @@ async function main() {
     await call(`/tabs/${encodeURIComponent(tabId)}/handoff/release`, { method: 'POST', body: { userId } });
   } finally {
     if (tabId) await call(`/tabs/${encodeURIComponent(tabId)}?userId=${encodeURIComponent(userId)}`, { method: 'DELETE' }).catch(() => {});
-    page.close();
+    page.server.close();
   }
 }
 
