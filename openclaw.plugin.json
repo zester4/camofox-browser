@@ -134,9 +134,9 @@
       "camofox_pay_disarm",
       "agentcard_enrol",
       "agentcard_cards",
-      "agentcard_placeholder",
       "agentcard_buy",
       "agentcard_merchants",
+      "agentcard_placeholder",
       "agentcard_presets_list",
       "agentcard_preset_set",
       "agentcard_preset_attach"

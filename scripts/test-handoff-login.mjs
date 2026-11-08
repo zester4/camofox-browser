@@ -46,7 +46,7 @@ let tabId = null;
 let failures = 0;
 let loginSite = null;
 let siteUrl = '';
-const siteState = { loginAccepted: 0, lastCookieOk: false };
+const siteState = { loginAccepted: 0, lastCookieOk: false, attempts: [], events: [] };
 
 function check(name, ok, detail = '') {
   if (ok) console.log(`PASS  ${name}${detail ? ` (${detail})` : ''}`);
@@ -66,6 +66,13 @@ function startLoginSite() {
         let body = '';
         for await (const chunk of req) body += chunk;
         const form = new URLSearchParams(body);
+        // What the site received, without the password itself: whether each field arrived and how long it was.
+        siteState.attempts.push({
+          userMatches: form.get('user') === USERNAME,
+          userLength: (form.get('user') || '').length,
+          passMatches: form.get('pass') === PASSWORD,
+          passLength: (form.get('pass') || '').length,
+        });
         if (form.get('user') === USERNAME && form.get('pass') === PASSWORD) {
           siteState.loginAccepted += 1;
           res.writeHead(303, { location: '/account', 'set-cookie': `session=${SESSION_VALUE}; Path=/; HttpOnly` });
@@ -73,6 +80,13 @@ function startLoginSite() {
         }
         res.writeHead(401, { 'content-type': 'text/html' });
         return res.end('<h1>Sign-in failed</h1>');
+      }
+      if (req.url.startsWith('/beacon')) {
+        // The page reports focus, typing lengths and Enter presses. Field names and lengths only, never the text.
+        const q = new URL(req.url, 'http://x').searchParams;
+        siteState.events.push({ event: q.get('event'), id: q.get('id'), len: q.get('len'), key: q.get('key') });
+        res.writeHead(204);
+        return res.end();
       }
       if (req.url === '/account') {
         siteState.lastCookieOk = signedIn;
@@ -85,6 +99,11 @@ function startLoginSite() {
       }
       res.writeHead(200, { 'content-type': 'text/html' });
       res.end(`<!doctype html><meta name="viewport" content="width=device-width"><title>Sign in</title>
+<script>
+  document.addEventListener('focusin', (e) => navigator.sendBeacon('/beacon?event=focus&id=' + e.target.id));
+  document.addEventListener('input', (e) => navigator.sendBeacon('/beacon?event=input&id=' + e.target.id + '&len=' + e.target.value.length));
+  document.addEventListener('keydown', (e) => { if (e.key === 'Enter') navigator.sendBeacon('/beacon?event=key&key=Enter&id=' + (e.target.id || e.target.tagName)); });
+</script>
 <main style="font:16px system-ui;padding:40px">
   <h1>Sign in</h1>
   <form method="POST" action="/login">
@@ -190,7 +209,8 @@ async function run() {
     ['type email', { action: 'type', text: USERNAME }],
     ['click password', { action: 'click', ...pass }],
     ['type password', { action: 'type', text: PASSWORD }],
-    ['click sign in', { action: 'click', ...button }],
+    // Enter in the password field submits the form, so the test doesn't depend on where the button is.
+    ['press Enter', { action: 'key', key: 'Enter' }],
   ];
   let inputsOk = true;
   for (const [name, body] of steps) {
@@ -205,7 +225,15 @@ async function run() {
 
   // Give the site a moment to answer the sign-in.
   await new Promise((r) => setTimeout(r, 2500));
-  check('the site accepted the sign-in', siteState.loginAccepted === 1, `accepted ${siteState.loginAccepted} time(s)`);
+  const last = siteState.attempts.at(-1);
+  const detail = last
+    ? `accepted ${siteState.loginAccepted}; last form: email ${last.userMatches ? 'matched' : `did not match (length ${last.userLength})`}, password ${last.passMatches ? 'matched' : `did not match (length ${last.passLength})`}`
+    : 'the sign-in form was never submitted';
+  check('the site accepted the sign-in', siteState.loginAccepted === 1, detail);
+  if (siteState.loginAccepted !== 1) {
+    const trail = siteState.events.slice(-12).map((e) => [e.event, e.id, e.len ? `len ${e.len}` : '', e.key ?? ''].filter(Boolean).join(' ')).join(' | ');
+    console.log(`      page reports: ${trail || 'nothing (the page sent no events)'}`);
+  }
 
   const done = await viewerPost('/live-viewer/done', link.token);
   check('the person presses Done', done.status === 200, `HTTP ${done.status}`);

@@ -141,8 +141,21 @@ function withTimeout(promise, ms) {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
+/**
+ * The size of the picture the person clicks on. The viewer's fractions are of the page as it is
+ * drawn, so use the page's real inner size. The configured viewport can differ from it, and then
+ * clicks land too far down the page.
+ */
+async function pictureSize(page) {
+  try {
+    const size = await withTimeout(page.evaluate(() => ({ width: window.innerWidth, height: window.innerHeight })), 2000);
+    if (size?.width > 0 && size?.height > 0) return size;
+  } catch { /* fall back to the configured viewport */ }
+  return page.viewportSize() || DEFAULT_VIEWPORT;
+}
+
 async function performInput(page, input) {
-  const viewport = page.viewportSize() || DEFAULT_VIEWPORT;
+  const viewport = await pictureSize(page);
   switch (input.action) {
     case 'click': {
       const p = toViewportPoint(input.x, input.y, viewport);
