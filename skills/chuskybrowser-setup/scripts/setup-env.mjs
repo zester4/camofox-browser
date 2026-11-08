@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Writes a local .env for a Camofox server. The access key is read from the
+// Writes a local .env for a Chusky server. The access key is read from the
 // environment or a prompt, written to .env with mode 600, and never printed.
 //
 //   node setup-env.mjs --base-url https://your-server.example.com [--force]
@@ -12,7 +12,7 @@ const args = process.argv.slice(2);
 const flag = (name) => args.includes(name);
 const opt = (name) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined; };
 
-const baseUrl = (opt('--base-url') || process.env.CAMOFOX_BASE_URL || '').replace(/\/+$/, '');
+const baseUrl = (opt('--base-url') || process.env.CHUSKY_BASE_URL || '').replace(/\/+$/, '');
 if (!/^https?:\/\/[^/]+/.test(baseUrl)) {
   console.error('Pass --base-url https://<your-server> (no trailing slash).');
   process.exit(2);
@@ -28,25 +28,25 @@ if (fs.existsSync(envFile) && !flag('--force')) {
   process.exit(2);
 }
 
-let key = process.env.CAMOFOX_ACCESS_KEY || '';
+let key = process.env.CHUSKY_ACCESS_KEY || '';
 if (!key) {
   if (!stdin.isTTY) {
-    console.error('Set CAMOFOX_ACCESS_KEY in the environment (no terminal to prompt on).');
+    console.error('Set CHUSKY_ACCESS_KEY in the environment (no terminal to prompt on).');
     process.exit(2);
   }
   const rl = readline.createInterface({ input: stdin, output: stdout });
-  key = (await rl.question('CAMOFOX_ACCESS_KEY (input is shown; paste from Railway Variables): ')).trim();
+  key = (await rl.question('CHUSKY_ACCESS_KEY (input is shown; paste from Railway Variables): ')).trim();
   rl.close();
 }
 if (key.length < 24) {
-  console.error('That key looks too short. Copy the full CAMOFOX_ACCESS_KEY from the server settings.');
+  console.error('That key looks too short. Copy the full CHUSKY_ACCESS_KEY from the server settings.');
   process.exit(2);
 }
 
 const body = [
-  '# Camofox client settings. Local only. Never commit this file.',
-  `CAMOFOX_BASE_URL=${baseUrl}`,
-  `CAMOFOX_ACCESS_KEY=${key}`,
+  '# Chusky client settings. Local only. Never commit this file.',
+  `CHUSKY_BASE_URL=${baseUrl}`,
+  `CHUSKY_ACCESS_KEY=${key}`,
   '',
 ].join('\n');
 fs.writeFileSync(envFile, body, { mode: 0o600 });

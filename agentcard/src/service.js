@@ -158,7 +158,7 @@ export function createAgentCardService(options) {
     account,
 
     /**
-     * Pay on a page (Camofox or any Playwright-style page): pauses the processor's
+     * Pay on a page (Chusky or any Playwright-style page): pauses the processor's
      * card request, asks the user to approve, and fulfils it with AgentCard's response.
      * See interception.js for the rules.
      */

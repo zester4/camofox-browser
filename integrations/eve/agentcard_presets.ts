@@ -2,11 +2,11 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 import {
-  camofoxPostBody,
-  camofoxRequest,
-  getCamofoxUserId,
-  readCamofoxJson,
-} from "../lib/camofox.js";
+  chuskyPostBody,
+  chuskyRequest,
+  getChuskyUserId,
+  readChuskyJson,
+} from "../lib/chusky.js";
 
 const RulesSchema = z.object({
   perDayCents: z.number().int().positive().optional(),
@@ -41,33 +41,33 @@ export default defineTool({
   }),
   outputSchema: z.object({}).passthrough(),
   async execute({ action, label, rules, cardId }, ctx) {
-    const userId = getCamofoxUserId(ctx.session.auth.current);
+    const userId = getChuskyUserId(ctx.session.auth.current);
     if (action === "list") {
       const query = new URLSearchParams({ userId });
-      return readCamofoxJson(
-        await camofoxRequest(`/agentcard/presets?${query}`, userId, ctx.abortSignal, "agentcard presets"),
+      return readChuskyJson(
+        await chuskyRequest(`/agentcard/presets?${query}`, userId, ctx.abortSignal, "agentcard presets"),
         "agentcard presets",
       );
     }
     if (!label) throw new Error("label is required for " + action + ".");
     if (action === "set") {
       if (!rules) throw new Error("rules is required for set.");
-      const response = await camofoxRequest(
+      const response = await chuskyRequest(
         `/agentcard/presets/${encodeURIComponent(label)}`,
         userId,
         ctx.abortSignal,
         "agentcard preset set",
-        { method: "PUT", body: camofoxPostBody(userId, { rules }) },
+        { method: "PUT", body: chuskyPostBody(userId, { rules }) },
       );
-      return readCamofoxJson(response, "agentcard preset set");
+      return readChuskyJson(response, "agentcard preset set");
     }
-    const response = await camofoxRequest(
+    const response = await chuskyRequest(
       `/agentcard/presets/${encodeURIComponent(label)}/attach`,
       userId,
       ctx.abortSignal,
       "agentcard preset attach",
-      { method: "POST", body: camofoxPostBody(userId, { cardId }) },
+      { method: "POST", body: chuskyPostBody(userId, { cardId }) },
     );
-    return readCamofoxJson(response, "agentcard preset attach");
+    return readChuskyJson(response, "agentcard preset attach");
   },
 });

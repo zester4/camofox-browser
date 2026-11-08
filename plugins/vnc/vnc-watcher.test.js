@@ -44,7 +44,7 @@ describe('vnc watcher helpers', () => {
   });
 
   test('maps the owned Xvfb PID through its lock file and real Unix socket', async () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'camofox-vnc-test-'));
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'chusky-vnc-test-'));
     tempDirs.push(root);
     const sockets = path.join(root, '.X11-unix');
     fs.mkdirSync(sockets);
@@ -57,7 +57,7 @@ describe('vnc watcher helpers', () => {
   });
 
   test('maps lock-free -displayfd sockets through the owned PID in procfs', async () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'camofox-vnc-test-'));
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'chusky-vnc-test-'));
     tempDirs.push(root);
     const sockets = path.join(root, '.X11-unix');
     const procRoot = path.join(root, 'proc');
@@ -76,7 +76,7 @@ describe('vnc watcher helpers', () => {
   });
 
   test('rejects another process lock and non-socket files', () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'camofox-vnc-test-'));
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'chusky-vnc-test-'));
     tempDirs.push(root);
     const sockets = path.join(root, '.X11-unix');
     fs.mkdirSync(sockets);

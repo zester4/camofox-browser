@@ -3,7 +3,7 @@
  * the OpenAPI documentation for each route.
  *
  * Authentication: the user routes sit behind the app's access-key middleware,
- * like every other Camofox route, so only the app's backend can call them. The
+ * like every other Chusky route, so only the app's backend can call them. The
  * backend names the user (`userId`). The webhook route is different: AgentCard
  * calls it, and the HMAC signature is its only authentication.
  *

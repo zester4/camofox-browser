@@ -1,8 +1,8 @@
-# Eve tool: camofox_handoff
+# Eve tool: chusky_handoff
 
 Lets an agent pause on a browser tab so the user can act on it (sign in, enter a code, solve a check), then resume.
 
-**Install:** copy `camofox_handoff.ts` to `agent/tools/` in your Eve agent. It needs `agent/lib/camofox.ts` (the shared Camofox helpers) and nothing else from this repo.
+**Install:** copy `chusky_handoff.ts` to `agent/tools/` in your Eve agent. It needs `agent/lib/chusky.ts` (the shared Chusky helpers) and nothing else from this repo.
 
 ## Actions
 

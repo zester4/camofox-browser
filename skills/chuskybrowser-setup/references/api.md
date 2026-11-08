@@ -1,6 +1,6 @@
-# Camofox REST API: what to call
+# Chusky REST API: what to call
 
-All requests except `GET /health` need `Authorization: Bearer <CAMOFOX_ACCESS_KEY>`.
+All requests except `GET /health` need `Authorization: Bearer <CHUSKY_ACCESS_KEY>`.
 Full machine-readable spec: `GET {BASE}/openapi.json`. Interactive docs: `GET {BASE}/docs`. Both need the key.
 
 The viewer routes (`/live-viewer/*`) are provided by a plugin and are not in `openapi.json`. They are listed below.

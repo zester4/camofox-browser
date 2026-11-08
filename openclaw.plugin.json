@@ -1,6 +1,6 @@
 {
-  "id": "camofox-browser",
-  "name": "Camofox Browser",
+  "id": "chuskybrowser",
+  "name": "Chusky Browser",
   "description": "Anti-detection browser automation for AI agents using Camoufox (Firefox-based)",
   "version": "1.18.1",
   "configSchema": {
@@ -17,7 +17,7 @@
       },
       "autoStart": {
         "type": "boolean",
-        "description": "Auto-start the camofox-browser server with the Gateway",
+        "description": "Auto-start the chuskybrowser server with the Gateway",
         "default": true
       },
       "maxSessions": {
@@ -47,11 +47,11 @@
       },
       "apiKey": {
         "type": "string",
-        "description": "Secret key for cookie import endpoint. Cookie import is disabled if unset. Set via CAMOFOX_API_KEY env var."
+        "description": "Secret key for cookie import endpoint. Cookie import is disabled if unset. Set via CHUSKY_API_KEY env var."
       },
       "accessKey": {
         "type": "string",
-        "description": "If set, all routes (except /health) require Authorization: Bearer <key>. Set via CAMOFOX_ACCESS_KEY env var."
+        "description": "If set, all routes (except /health) require Authorization: Bearer <key>. Set via CHUSKY_ACCESS_KEY env var."
       },
       "crashReportEnabled": {
         "type": "boolean",
@@ -60,7 +60,7 @@
       },
       "crashReportUrl": {
         "type": "string",
-        "description": "Telemetry endpoint URL. Override to point to a self-hosted endpoint. Set via CAMOFOX_CRASH_REPORT_URL env var.",
+        "description": "Telemetry endpoint URL. Override to point to a self-hosted endpoint. Set via CHUSKY_CRASH_REPORT_URL env var.",
         "default": "https://camofox-telemetry.askjo.workers.dev/report"
       }
     },
@@ -99,11 +99,11 @@
       "placeholder": "128"
     },
     "apiKey": {
-      "label": "Cookie Import API Key (CAMOFOX_API_KEY)",
+      "label": "Cookie Import API Key (CHUSKY_API_KEY)",
       "placeholder": "Leave empty to disable cookie import"
     },
     "accessKey": {
-      "label": "Global Access Key (CAMOFOX_ACCESS_KEY)",
+      "label": "Global Access Key (CHUSKY_ACCESS_KEY)",
       "placeholder": "Leave empty for localhost-only access"
     },
     "crashReportEnabled": {
@@ -116,22 +116,22 @@
   },
   "contracts": {
     "tools": [
-      "camofox_create_tab",
-      "camofox_snapshot",
-      "camofox_click",
-      "camofox_type",
-      "camofox_navigate",
-      "camofox_scroll",
-      "camofox_screenshot",
-      "camofox_close_tab",
-      "camofox_evaluate",
-      "camofox_list_tabs",
-      "camofox_import_cookies",
-      "camofox_handoff_start",
-      "camofox_handoff_release",
-      "camofox_pay_arm",
-      "camofox_pay_status",
-      "camofox_pay_disarm",
+      "chusky_create_tab",
+      "chusky_snapshot",
+      "chusky_click",
+      "chusky_type",
+      "chusky_navigate",
+      "chusky_scroll",
+      "chusky_screenshot",
+      "chusky_close_tab",
+      "chusky_evaluate",
+      "chusky_list_tabs",
+      "chusky_import_cookies",
+      "chusky_handoff_start",
+      "chusky_handoff_release",
+      "chusky_pay_arm",
+      "chusky_pay_status",
+      "chusky_pay_disarm",
       "agentcard_enrol",
       "agentcard_cards",
       "agentcard_buy",

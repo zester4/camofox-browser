@@ -26,7 +26,7 @@ test('profile path extraction accepts separate and equals-form profile arguments
 
 
 test('cleanup snapshot never adopts another scoped server browser', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'camofox-proc-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'chusky-proc-'));
   proc(root, 100, 1, 'node\0server.js');
   proc(root, 101, 100, '/usr/bin/Xvfb\0:10');
   proc(root, 102, 100, '/cache/camoufox-bin\0-foreground');
@@ -41,7 +41,7 @@ test('cleanup snapshot never adopts another scoped server browser', () => {
 });
 
 test('only captured descendants survive reparenting; unrelated PID 1 browsers do not', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'camofox-proc-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'chusky-proc-'));
   proc(root, 100, 1, 'node\0server.js');
   proc(root, 101, 100, '/cache/camoufox-bin', '10');
   proc(root, 202, 1, '/cache/camoufox-bin', '20');
@@ -55,7 +55,7 @@ test('only captured descendants survive reparenting; unrelated PID 1 browsers do
 });
 
 test('pid reuse is not mistaken for an owned survivor', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'camofox-proc-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'chusky-proc-'));
   proc(root, 100, 1, 'node\0server.js');
   proc(root, 101, 100, '/cache/camoufox-bin', '10');
   const snapshot = snapshotOwnedBrowserProcesses(100, root);
@@ -65,7 +65,7 @@ test('pid reuse is not mistaken for an owned survivor', () => {
 });
 
 test('process start time parsing tolerates spaces and parentheses in comm', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'camofox-proc-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'chusky-proc-'));
   proc(root, 100, 1, 'node\0server.js');
   proc(root, 101, 100, '/cache/camoufox-bin', '42', 'Camoufox Worker (GPU)');
   const snapshot = snapshotOwnedBrowserProcesses(100, root);

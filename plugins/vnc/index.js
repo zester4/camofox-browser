@@ -1,5 +1,5 @@
 /**
- * VNC plugin for camofox-browser.
+ * VNC plugin for chuskybrowser.
  *
  * Exposes Camoufox's virtual display via noVNC so a human can interact with
  * the browser visually -- log into sites, solve CAPTCHAs, approve OAuth prompts.
@@ -12,7 +12,7 @@
  *   Xvfb process, attaches x11vnc, and noVNC (websockify) proxies it to a
  *   web UI on port 6080.
  *
- * Configuration (camofox.config.json):
+ * Configuration (chusky.config.json):
  *   {
  *     "plugins": {
  *       "vnc": {

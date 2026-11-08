@@ -1,6 +1,6 @@
 # Windows ARM64 UTM E2E runner (macOS)
 
-This directory creates a **new, isolated** Windows 11 ARM64 virtual machine (VM) in [UTM](https://mac.getutm.app/) for reproducing Camofox Windows failures locally. It is developer tooling, not part of the Camofox runtime or CI job.
+This directory creates a **new, isolated** Windows 11 ARM64 virtual machine (VM) in [UTM](https://mac.getutm.app/) for reproducing Chusky Windows failures locally. It is developer tooling, not part of the Chusky runtime or CI job.
 
 The GitHub Actions Windows job remains the normal test path. Use this only when a hosted Windows failure needs interactive or SSH-based investigation.
 
@@ -32,12 +32,12 @@ Do not commit the Windows installer, generated ISOs or images, UTM bundles, VM d
 Run these commands from the repository root. Choose an artifact directory outside the repository; generated files are large.
 
 ```sh
-mkdir -p "$HOME/Downloads/camofox-windows-e2e"
-ssh-keygen -t ed25519 -f "$HOME/.ssh/camofox-windows-e2e" -C camofox-windows-e2e
+mkdir -p "$HOME/Downloads/chusky-windows-e2e"
+ssh-keygen -t ed25519 -f "$HOME/.ssh/chusky-windows-e2e" -C chusky-windows-e2e
 
 # Replace this with the verified Microsoft ARM64 installer you downloaded.
 WINDOWS_ISO="$HOME/Downloads/Win11_25H2_English_Arm64_v2.iso"
-ARTIFACTS="$HOME/Downloads/camofox-windows-e2e"
+ARTIFACTS="$HOME/Downloads/chusky-windows-e2e"
 
 # The derived installer retains Microsoft's files and adds only startup.nsh.
 tools/windows-utm/build-installer-autoboot-iso.sh \
@@ -51,25 +51,25 @@ tools/windows-utm/build-fat-bootstrap.py \
 
 # New-VM-only answer ISO. It embeds the public key, never the private key.
 tools/windows-utm/build-provisioning-iso.sh \
-  --public-key "$HOME/.ssh/camofox-windows-e2e.pub" \
-  --output "$ARTIFACTS/camofox-windows-provisioning.iso"
+  --public-key "$HOME/.ssh/chusky-windows-e2e.pub" \
+  --output "$ARTIFACTS/chusky-windows-provisioning.iso"
 
 # Creates a new VM; it refuses to overwrite an existing bundle.
 tools/windows-utm/create-vm.sh \
   --installer "$ARTIFACTS/windows-installer.iso" \
-  --provisioning "$ARTIFACTS/camofox-windows-provisioning.iso" \
+  --provisioning "$ARTIFACTS/chusky-windows-provisioning.iso" \
   --bootstrap "$ARTIFACTS/windows-fat-bootstrap.img"
 ```
 
-The final command opens UTM. Let Windows Setup finish. It creates the unprivileged `camofox-e2e` account, installs OpenSSH Server, and forwards guest port 22 only to `127.0.0.1:22222` on the Mac.
+The final command opens UTM. Let Windows Setup finish. It creates the unprivileged `chusky-e2e` account, installs OpenSSH Server, and forwards guest port 22 only to `127.0.0.1:22222` on the Mac.
 
 Once Windows is up, verify SSH:
 
 ```sh
-ssh -i "$HOME/.ssh/camofox-windows-e2e" -p 22222 camofox-e2e@127.0.0.1
+ssh -i "$HOME/.ssh/chusky-windows-e2e" -p 22222 chusky-e2e@127.0.0.1
 ```
 
-Then use that SSH session to run the bounded Windows test or inspect the Windows setup log at `C:\ProgramData\CamofoxE2E\provision.log`.
+Then use that SSH session to run the bounded Windows test or inspect the Windows setup log at `C:\ProgramData\ChuskyE2E\provision.log`.
 
 ## Safety
 

@@ -6,7 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 
-const ENV_FILE = path.join(os.tmpdir(), 'camofox-e2e-env.json');
+const ENV_FILE = path.join(os.tmpdir(), 'chusky-e2e-env.json');
 
 let cached = null;
 

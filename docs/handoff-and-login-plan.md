@@ -13,11 +13,11 @@ This plan covers two connected features:
 
 | Piece | State | Notes |
 |---|---|---|
-| Camofox browser server (Railway) | Running | Access key required on all routes except `/health` |
+| Chusky browser server (Railway) | Running | Access key required on all routes except `/health` |
 | Live viewer (`plugins/live-viewer`) | Running, view-only | Signed per-tab links, screenshots about once a second, action log |
 | Click/type action log in viewer | Reverted | Removed at your request; can be re-added later |
 | VNC shared display | Running on Railway but **not for users** | One shared screen, so it cannot give per-user views |
-| Eve tools (`camofox_*`) | Running | Click, type, scroll, navigate, snapshot, close, cookies |
+| Eve tools (`chusky_*`) | Running | Click, type, scroll, navigate, snapshot, close, cookies |
 | Eve live-viewer link TTL | 120 seconds | Set in the Eve app; server default is 30 min, max 4 hours |
 | Persistence plugin | Running | Saves per-user session state. **Stored in plain JSON, which must be fixed (Phase 6)** |
 | Proxy | Not configured | Needed if Google and other sites block Railway's IP |
@@ -33,7 +33,7 @@ These must be settled first. Phase 0 is a decision checkpoint, not code.
 | # | Question | Options | Recommendation |
 |---|---|---|---|
 | D1 | Which 1Password product? | (a) Service account + SDK, (b) Connect server (self-hosted) | (a) is simpler to run. Check that your plan includes service accounts (I believe it needs a Business plan, but confirm current terms). |
-| D2 | Vault layout | (a) One vault for all users, items tagged per user, (b) one vault per user | (a) is easier to manage. Tag items with the same hashed user ID that `getCamofoxUserId` already produces. |
+| D2 | Vault layout | (a) One vault for all users, items tagged per user, (b) one vault per user | (a) is easier to manage. Tag items with the same hashed user ID that `getChuskyUserId` already produces. |
 | D3 | First sites to support | e.g. one shopping site, one ride app, one food app | Start with 1–2 sites where we can test with a dummy account. |
 | D4 | Two-factor codes (SMS, app, email) | (a) Hand off to the user in the live viewer, (b) skip those sites | (a). The agent cannot read codes safely. |
 | D5 | Can users watch logins live? | Yes / no | Yes, but the login step hides screenshots (see Security rules). |
@@ -46,7 +46,7 @@ These must be settled first. Phase 0 is a decision checkpoint, not code.
 ### 3.1 Handoff (control flag)
 
 ```
-Agent (Eve tool)                 Camofox server                    User (viewer)
+Agent (Eve tool)                 Chusky server                    User (viewer)
      |                                |                                 |
      | click/type/navigate ---------> | check tab control flag          |
      |                                |  if human -> 409 human_in_control|
@@ -72,13 +72,13 @@ User browser (Vercel app)
 Vercel API route (server-side only)
    | 2. writes item to 1Password with service account token
    v
-1Password vault "Camofox Users"
+1Password vault "Chusky Users"
    item tag = hashed userId, fields: username, password, website URL
 
-Agent (Eve tool: camofox_login { tabId, site })
-   | 3. asks Camofox to log in for a site. Sends NO credentials.
+Agent (Eve tool: chusky_login { tabId, site })
+   | 3. asks Chusky to log in for a site. Sends NO credentials.
    v
-Camofox server  POST /tabs/:tabId/login
+Chusky server  POST /tabs/:tabId/login
    | 4. reads the user's item from 1Password (server-side token)
    | 5. checks the current page domain matches the item's website URL
    | 6. fills the login form with a per-site recipe
@@ -90,7 +90,7 @@ Returns { status: "logged_in" | "failed" | "needs_human" }
 Key points:
 
 - **The agent sees only the site name and the status.** The password never enters the agent's context, tool results, or logs.
-- **The browser (user side) never talks to 1Password directly.** Only the Vercel server and the Camofox server hold the 1Password token.
+- **The browser (user side) never talks to 1Password directly.** Only the Vercel server and the Chusky server hold the 1Password token.
 - **Per-site recipes** tell the server which fields to fill and which buttons to press for each site. They are code in the repo, reviewed like any other change.
 - **After a successful login**, the persistence plugin saves the session so later runs do not need to log in again.
 
@@ -123,7 +123,7 @@ Each phase has a done-when list. We do not start a phase until the previous one 
 - [ ] Settle D1–D6 in section 2
 - [ ] Confirm 1Password plan includes service accounts (or Connect)
 - [ ] Pick the first two sites for login support
-- [ ] Create the 1Password account and the "Camofox Users" vault
+- [ ] Create the 1Password account and the "Chusky Users" vault
 - **Done when:** decisions are written into this file.
 
 ### Phase 1: Control flag (no behaviour change)
@@ -144,7 +144,7 @@ Each phase has a done-when list. We do not start a phase until the previous one 
 - **Done when:** a human can take over, click, type, scroll, and hand back, and the agent is blocked only during takeover.
 
 ### Phase 3: Agent handoff request
-- [ ] Add Eve tool `camofox_request_handoff { tabId, reason }` that sets the tab to human control and returns the viewer link
+- [ ] Add Eve tool `chusky_request_handoff { tabId, reason }` that sets the tab to human control and returns the viewer link
 - [ ] Eve tools report `human_in_control` to the agent with instructions to stop
 - [ ] Auto-release tested
 - **Done when:** the agent can hand control to the user and resume after hand-back, with no stuck tabs.
@@ -152,10 +152,10 @@ Each phase has a done-when list. We do not start a phase until the previous one 
 ### Phase 4: Credential vault and login route
 - [ ] Vercel: form for email and password, posting to a server route that writes to 1Password
 - [ ] Vercel: server route for listing a user's saved sites (no passwords returned)
-- [ ] Camofox: `POST /tabs/:tabId/login { userId, site }` reads the item by user tag
+- [ ] Chusky: `POST /tabs/:tabId/login { userId, site }` reads the item by user tag
 - [ ] Domain binding check before filling
 - [ ] Wrong password, missing item, and domain mismatch each return a clear status
-- [ ] Eve tool `camofox_login { tabId, site }` takes only the site name
+- [ ] Eve tool `chusky_login { tabId, site }` takes only the site name
 - [ ] Test fixture: a local login page in the repo, used with a dummy account
 - [ ] Log-hygiene test: grep logs for the test password
 - **Done when:** a fixture site logs in through the vault, the agent never sees the password, and a mismatched domain is refused.

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * camofox plugin manager -- install, remove, and list plugins.
+ * chusky plugin manager -- install, remove, and list plugins.
  *
  * Usage:
  *   node scripts/plugin.js install <source>   Install a plugin from git URL or local path
@@ -18,7 +18,7 @@
  * an index.js with register(), it's used directly. If it has a plugins/ subdir,
  * each subdirectory is installed as a separate plugin.
  *
- * After install, the plugin is added to camofox.config.json plugins[] and
+ * After install, the plugin is added to chusky.config.json plugins[] and
  * npm dependencies are installed if the plugin has a package.json.
  */
 
@@ -30,7 +30,7 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 const PLUGINS_DIR = path.join(ROOT, 'plugins');
-const CONFIG_PATH = path.join(ROOT, 'camofox.config.json');
+const CONFIG_PATH = path.join(ROOT, 'chusky.config.json');
 
 // -- Config helpers ----------------------------------------------------------
 
@@ -38,7 +38,7 @@ function readConfig() {
   try {
     return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8'));
   } catch {
-    return { id: 'camofox-browser', name: 'Camofox Browser', version: '0.0.0', plugins: [] };
+    return { id: 'chuskybrowser', name: 'Chusky Browser', version: '0.0.0', plugins: [] };
   }
 }
 
@@ -261,7 +261,7 @@ function listPlugins() {
   }
 
   if (configPlugins.size > 0) {
-    console.log(`\n${configPlugins.size} plugin(s) enabled in camofox.config.json`);
+    console.log(`\n${configPlugins.size} plugin(s) enabled in chusky.config.json`);
   } else {
     console.log('\nNo plugins[] in config -- all plugins are loaded');
   }
@@ -327,7 +327,7 @@ switch (action) {
   }
 
   default:
-    console.log(`camofox plugin manager
+    console.log(`chusky plugin manager
 
 Usage:
   node scripts/plugin.js install <source>   Install from git URL or local path

@@ -8,7 +8,7 @@ import os from 'os';
 import { cleanupOrphanedTempFiles, cleanupStaleFirefoxProfiles, removeXvfbDisplayFiles } from '../../lib/tmp-cleanup.js';
 
 function makeTmpDir() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'camofox-test-'));
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'chusky-test-'));
 }
 
 describe('removeXvfbDisplayFiles', () => {
@@ -93,7 +93,7 @@ describe('cleanupOrphanedTempFiles', () => {
   });
 
   it('returns zeros for nonexistent tmpDir', () => {
-    const result = cleanupOrphanedTempFiles({ tmpDir: '/tmp/camofox-nonexistent-xyz' });
+    const result = cleanupOrphanedTempFiles({ tmpDir: '/tmp/chusky-nonexistent-xyz' });
     expect(result).toEqual({ scanned: 0, removed: 0, bytes: 0, skipped: 0 });
   });
 
@@ -209,7 +209,7 @@ describe('cleanupStaleFirefoxProfiles', () => {
   });
 
   it('handles nonexistent tmpDir gracefully', () => {
-    const result = cleanupStaleFirefoxProfiles({ tmpDir: '/tmp/camofox-nonexistent-dir-xyz' });
+    const result = cleanupStaleFirefoxProfiles({ tmpDir: '/tmp/chusky-nonexistent-dir-xyz' });
     expect(result.scanned).toBe(0);
   });
 });

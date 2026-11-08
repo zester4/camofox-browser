@@ -3,7 +3,7 @@
 // Claude Code usage (long-lived process, fixed userId). Takes a JSON sequence
 // as a CLI argument.
 //
-// Usage: node scripts/mcp-run.mjs '[["camofox_create_tab",{"url":"..."}],["camofox_snapshot",{}]]'
+// Usage: node scripts/mcp-run.mjs '[["chusky_create_tab",{"url":"..."}],["chusky_snapshot",{}]]'
 // A snapshot's tabId is auto-substituted from the prior create_tab result ("${tabId}").
 import { spawn } from "node:child_process";
 import { resolve } from "node:path";
@@ -18,7 +18,7 @@ const proc = spawn(process.execPath, [SERVER], {
   env: {
     PATH: process.env.PATH, HOME: process.env.HOME, USER: process.env.USER,
     NODE_OPTIONS: process.env.NODE_OPTIONS || "",
-    CAMOFOX_BASE_URL: process.env.CAMOFOX_BASE_URL || "http://localhost:9377",
+    CHUSKY_BASE_URL: process.env.CHUSKY_BASE_URL || "http://localhost:9377",
   },
   stdio: ["pipe", "pipe", "pipe"],
 });

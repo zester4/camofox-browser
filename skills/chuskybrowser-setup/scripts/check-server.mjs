@@ -1,19 +1,19 @@
 #!/usr/bin/env node
-// Verifies a Camofox server end to end: health, key, open, state, read, extract, close.
+// Verifies a Chusky server end to end: health, key, open, state, read, extract, close.
 // Uses a throwaway userId, so it never touches a real user's tabs.
 //   node scripts/check-server.mjs [--url https://example.com]
 import { loadDotEnv, reporter } from './lib-env.mjs';
-import { CamofoxClient } from './camofox-client.mjs';
+import { ChuskyClient } from './chusky-client.mjs';
 
 const env = { ...loadDotEnv(), ...process.env };
 const args = process.argv.slice(2);
 const target = args.includes('--url') ? args[args.indexOf('--url') + 1] : 'https://example.com';
 const r = reporter();
 
-const baseUrl = env.CAMOFOX_BASE_URL;
-const accessKey = env.CAMOFOX_ACCESS_KEY;
+const baseUrl = env.CHUSKY_BASE_URL;
+const accessKey = env.CHUSKY_ACCESS_KEY;
 if (!baseUrl || !accessKey) {
-  r.fail('config', 'CAMOFOX_BASE_URL and CAMOFOX_ACCESS_KEY must be set (run setup-env.mjs)');
+  r.fail('config', 'CHUSKY_BASE_URL and CHUSKY_ACCESS_KEY must be set (run setup-env.mjs)');
   r.done(); process.exit(1);
 }
 
@@ -22,7 +22,7 @@ const check = async (name, fn) => {
   catch (e) { r.fail(name, e.message.slice(0, 200)); return false; }
 };
 
-const probe = new CamofoxClient({ baseUrl, accessKey, userId: 'setup-check' });
+const probe = new ChuskyClient({ baseUrl, accessKey, userId: 'setup-check' });
 let tabId;
 
 await check('health reachable without key', async () => {
@@ -68,7 +68,7 @@ if (tabId) {
 await check('end setup session', async () => { await probe.endSession(); return 'ok'; });
 
 await check('wrong key is refused (401)', async () => {
-  const bad = new CamofoxClient({ baseUrl, accessKey: accessKey + 'x', userId: 'setup-check' });
+  const bad = new ChuskyClient({ baseUrl, accessKey: accessKey + 'x', userId: 'setup-check' });
   try { await bad.openTab({ url: target, sessionKey: 'setup-check' }); }
   catch (e) { if (e.status === 401) return 'refused as expected'; throw e; }
   throw new Error('a wrong key was accepted');

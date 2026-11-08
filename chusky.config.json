@@ -1,6 +1,6 @@
 {
-  "id": "camofox-browser",
-  "name": "Camofox Browser",
+  "id": "chuskybrowser",
+  "name": "Chusky Browser",
   "version": "1.6.0",
   "newPageTimeoutMs": 10000,
   "interactive": { "mode": "off" },

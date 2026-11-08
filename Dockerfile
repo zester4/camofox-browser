@@ -2,7 +2,7 @@
 # linked against GLIBC_2.38, so on bookworm it loads and then dies at runtime with
 # "version `GLIBC_2.38' not found" the first time a tab is opened. amd64 is
 # unaffected because that prebuild targets an older glibc.
-FROM node:22-trixie-slim AS camofox-browser
+FROM node:22-trixie-slim AS chuskybrowser
 
 # Pinned Camoufox version for reproducible builds
 # Update these when upgrading Camoufox
@@ -87,7 +87,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY server.js ./
-COPY camofox.config.json ./
+COPY chusky.config.json ./
 COPY lib/ ./lib/
 COPY agentcard/ ./agentcard/
 # lib/cookies.js is a compatibility re-export from ../mcp/lib/cookies.mjs, so mcp/
@@ -103,16 +103,16 @@ COPY scripts/ ./scripts/
 RUN sh scripts/install-plugin-deps.sh
 
 ENV NODE_ENV=production
-ENV CAMOFOX_PORT=9377
+ENV CHUSKY_PORT=9377
 
 EXPOSE 9377
 
 CMD ["sh", "-c", "node --max-old-space-size=${MAX_OLD_SPACE_SIZE:-128} server.js"]
 
 # Optional: rebuild plugin deps after adding third-party plugins
-# Usage: docker build --target with-plugins -t camofox-browser .
-FROM camofox-browser AS with-plugins
+# Usage: docker build --target with-plugins -t chuskybrowser .
+FROM chuskybrowser AS with-plugins
 COPY plugins/ ./plugins/
-COPY camofox.config.json ./
+COPY chusky.config.json ./
 COPY scripts/install-plugin-deps.sh /tmp/install-plugin-deps.sh
 RUN /tmp/install-plugin-deps.sh && rm /tmp/install-plugin-deps.sh

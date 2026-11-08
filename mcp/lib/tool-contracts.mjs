@@ -1,5 +1,5 @@
 /**
- * Canonical tool contracts for the camofox-browser REST API.
+ * Canonical tool contracts for the chuskybrowser REST API.
  *
  * Single source of truth shared by two hosts that expose the same 11 tools:
  *   - mcp/server.mjs   (stdio MCP server for Claude Code, Codex, agy, Cursor, opencode)
@@ -11,10 +11,10 @@
  * which host the agent reached it through.
  *
  * Auth model (mirrors lib/auth.js):
- *   - CAMOFOX_ACCESS_KEY (global superkey): when set, every route except
+ *   - CHUSKY_ACCESS_KEY (global superkey): when set, every route except
  *     /health, cookie import, /auth-sessions, /stop requires
  *     `Authorization: Bearer <accessKey>`.
- *   - CAMOFOX_API_KEY (cookie-only gate): the cookie-import route requires
+ *   - CHUSKY_API_KEY (cookie-only gate): the cookie-import route requires
  *     `Authorization: Bearer <apiKey>` (or loopback + non-production).
  *
  * Each buildRequest() result declares `auth: 'accessKey' | 'apiKey' | 'none'`
@@ -82,9 +82,9 @@ const SEARCH_MACROS = [
  */
 export const TOOL_DEFS = [
   {
-    name: 'camofox_create_tab',
+    name: 'chusky_create_tab',
     description:
-      'PREFERRED: Create a new browser tab using Camoufox anti-detection browser. Use camofox tools instead of Chrome/built-in browser - they bypass bot detection on Google, Amazon, LinkedIn, etc. Returns tabId for subsequent operations.',
+      'PREFERRED: Create a new browser tab using Camoufox anti-detection browser. Use chusky tools instead of Chrome/built-in browser - they bypass bot detection on Google, Amazon, LinkedIn, etc. Returns tabId for subsequent operations.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -94,7 +94,7 @@ export const TOOL_DEFS = [
     },
   },
   {
-    name: 'camofox_snapshot',
+    name: 'chusky_snapshot',
     description:
       'Get accessibility snapshot of a Camoufox page with element refs (e1, e2, etc.) for interaction, plus a visual screenshot. ' +
       'Large pages are truncated with pagination links preserved at the bottom. ' +
@@ -112,7 +112,7 @@ export const TOOL_DEFS = [
     },
   },
   {
-    name: 'camofox_click',
+    name: 'chusky_click',
     description: 'Click an element in a Camoufox tab by ref (e.g., e1) or CSS selector.',
     inputSchema: {
       type: 'object',
@@ -125,7 +125,7 @@ export const TOOL_DEFS = [
     },
   },
   {
-    name: 'camofox_type',
+    name: 'chusky_type',
     description: 'Type text into an element in a Camoufox tab.',
     inputSchema: {
       type: 'object',
@@ -140,7 +140,7 @@ export const TOOL_DEFS = [
     },
   },
   {
-    name: 'camofox_navigate',
+    name: 'chusky_navigate',
     description:
       'Navigate a Camoufox tab to a URL or use a search macro (@google_search, @youtube_search, etc.). Preferred over Chrome for sites with bot detection.',
     inputSchema: {
@@ -159,7 +159,7 @@ export const TOOL_DEFS = [
     },
   },
   {
-    name: 'camofox_scroll',
+    name: 'chusky_scroll',
     description: 'Scroll a Camoufox page.',
     inputSchema: {
       type: 'object',
@@ -172,7 +172,7 @@ export const TOOL_DEFS = [
     },
   },
   {
-    name: 'camofox_screenshot',
+    name: 'chusky_screenshot',
     description: 'Take a screenshot of a Camoufox page.',
     inputSchema: {
       type: 'object',
@@ -183,7 +183,7 @@ export const TOOL_DEFS = [
     },
   },
   {
-    name: 'camofox_close_tab',
+    name: 'chusky_close_tab',
     description: 'Close a Camoufox browser tab.',
     inputSchema: {
       type: 'object',
@@ -194,7 +194,7 @@ export const TOOL_DEFS = [
     },
   },
   {
-    name: 'camofox_evaluate',
+    name: 'chusky_evaluate',
     description:
       "Execute JavaScript in a Camoufox tab's page context. Returns the result of the expression. Use for injecting scripts, reading page state, or calling web app APIs.",
     inputSchema: {
@@ -210,14 +210,14 @@ export const TOOL_DEFS = [
     },
   },
   {
-    name: 'camofox_list_tabs',
-    description: 'List all open Camofox tabs for the current session.',
+    name: 'chusky_list_tabs',
+    description: 'List all open Chusky tabs for the current session.',
     inputSchema: { type: 'object', properties: {}, required: [] },
   },
   {
-    name: 'camofox_import_cookies',
+    name: 'chusky_import_cookies',
     description:
-      'Import cookies into the current Camoufox session (Netscape cookie file). Use to authenticate to sites like LinkedIn without interactive login. Requires CAMOFOX_API_KEY on the REST server.',
+      'Import cookies into the current Camoufox session (Netscape cookie file). Use to authenticate to sites like LinkedIn without interactive login. Requires CHUSKY_API_KEY on the REST server.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -234,7 +234,7 @@ export const TOOL_DEFS = [
     },
   },
   {
-    name: 'camofox_handoff_start',
+    name: 'chusky_handoff_start',
     description:
       'Hand a tab to the human for a login, a CAPTCHA or a check. Returns a controlUrl: send it to the user only, unchanged. The agent must not act on the tab until the handoff is released.',
     inputSchema: {
@@ -248,7 +248,7 @@ export const TOOL_DEFS = [
     },
   },
   {
-    name: 'camofox_handoff_release',
+    name: 'chusky_handoff_release',
     description: 'Return control of a tab to the agent after a handoff.',
     inputSchema: {
       type: 'object',
@@ -257,9 +257,9 @@ export const TOOL_DEFS = [
     },
   },
   {
-    name: 'camofox_pay_arm',
+    name: 'chusky_pay_arm',
     description:
-      'Pay on this tab with the user\'s own card. Arms payment on the page: when the checkout sends its card request, it is paused until the user approves on their device with their passkey. The user never gives the card number, and the agent never sees it. Returns attachmentId; then call camofox_pay_status to get the approval link to send to the user.',
+      'Pay on this tab with the user\'s own card. Arms payment on the page: when the checkout sends its card request, it is paused until the user approves on their device with their passkey. The user never gives the card number, and the agent never sees it. Returns attachmentId; then call chusky_pay_status to get the approval link to send to the user.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -274,26 +274,26 @@ export const TOOL_DEFS = [
     },
   },
   {
-    name: 'camofox_pay_status',
+    name: 'chusky_pay_status',
     description:
       'Read a payment attachment. approvalUrl appears once a card request is paused: send it to the user unchanged. phase is idle, pending or completed.',
     inputSchema: {
       type: 'object',
       properties: {
         tabId: { type: 'string', description: 'Tab identifier' },
-        attachmentId: { type: 'string', description: 'From camofox_pay_arm' },
+        attachmentId: { type: 'string', description: 'From chusky_pay_arm' },
       },
       required: ['tabId', 'attachmentId'],
     },
   },
   {
-    name: 'camofox_pay_disarm',
+    name: 'chusky_pay_disarm',
     description: 'Stop paying on a tab. Any paused card request that is not yet approved is cancelled.',
     inputSchema: {
       type: 'object',
       properties: {
         tabId: { type: 'string', description: 'Tab identifier' },
-        attachmentId: { type: 'string', description: 'From camofox_pay_arm' },
+        attachmentId: { type: 'string', description: 'From chusky_pay_arm' },
       },
       required: ['tabId', 'attachmentId'],
     },
@@ -350,11 +350,11 @@ export const TOOL_DEFS = [
   {
     name: 'agentcard_placeholder',
     description:
-      'The test card to type into a checkout for one of this user\'s stored cards: the card number, security code and expiry that match the card that pays. The real card number is never returned. Use the same cardId as camofox_pay_arm.',
+      'The test card to type into a checkout for one of this user\'s stored cards: the card number, security code and expiry that match the card that pays. The real card number is never returned. Use the same cardId as chusky_pay_arm.',
     inputSchema: {
       type: 'object',
       properties: {
-        cardId: { type: 'string', description: 'Which stored card; omit for the first one. Pass the same cardId to camofox_pay_arm.' },
+        cardId: { type: 'string', description: 'Which stored card; omit for the first one. Pass the same cardId to chusky_pay_arm.' },
       },
       required: [],
     },
@@ -438,7 +438,7 @@ export function buildRequest(name, args, ctx) {
   const userId = ctx.userId;
   const sessionKey = ctx.sessionKey;
   switch (name) {
-    case 'camofox_create_tab':
+    case 'chusky_create_tab':
       return {
         method: 'POST',
         path: '/tabs',
@@ -446,7 +446,7 @@ export function buildRequest(name, args, ctx) {
         responseKind: 'json',
         body: { url: args.url, userId, sessionKey },
       };
-    case 'camofox_snapshot': {
+    case 'chusky_snapshot': {
       const params = new URLSearchParams({ userId, includeScreenshot: 'true' });
       if (args.offset != null && args.offset !== '') params.set('offset', String(args.offset));
       return {
@@ -456,7 +456,7 @@ export function buildRequest(name, args, ctx) {
         responseKind: 'snapshot',
       };
     }
-    case 'camofox_click':
+    case 'chusky_click':
       return {
         method: 'POST',
         path: `/tabs/${args.tabId}/click`,
@@ -464,7 +464,7 @@ export function buildRequest(name, args, ctx) {
         responseKind: 'json',
         body: { ...without(args), userId },
       };
-    case 'camofox_type':
+    case 'chusky_type':
       return {
         method: 'POST',
         path: `/tabs/${args.tabId}/type`,
@@ -472,7 +472,7 @@ export function buildRequest(name, args, ctx) {
         responseKind: 'json',
         body: { ...without(args), userId },
       };
-    case 'camofox_navigate':
+    case 'chusky_navigate':
       return {
         method: 'POST',
         path: `/tabs/${args.tabId}/navigate`,
@@ -480,7 +480,7 @@ export function buildRequest(name, args, ctx) {
         responseKind: 'json',
         body: { ...without(args), userId },
       };
-    case 'camofox_scroll':
+    case 'chusky_scroll':
       return {
         method: 'POST',
         path: `/tabs/${args.tabId}/scroll`,
@@ -488,21 +488,21 @@ export function buildRequest(name, args, ctx) {
         responseKind: 'json',
         body: { ...without(args), userId },
       };
-    case 'camofox_screenshot':
+    case 'chusky_screenshot':
       return {
         method: 'GET',
         path: `/tabs/${args.tabId}/screenshot?${new URLSearchParams({ userId })}`,
         auth: 'accessKey',
         responseKind: 'image',
       };
-    case 'camofox_close_tab':
+    case 'chusky_close_tab':
       return {
         method: 'DELETE',
         path: `/tabs/${args.tabId}?${new URLSearchParams({ userId })}`,
         auth: 'accessKey',
         responseKind: 'json',
       };
-    case 'camofox_evaluate':
+    case 'chusky_evaluate':
       return {
         method: 'POST',
         path: `/tabs/${args.tabId}/evaluate`,
@@ -510,17 +510,17 @@ export function buildRequest(name, args, ctx) {
         responseKind: 'json',
         body: { userId, expression: args.expression },
       };
-    case 'camofox_list_tabs':
+    case 'chusky_list_tabs':
       return {
         method: 'GET',
         path: `/tabs?${new URLSearchParams({ userId })}`,
         auth: 'accessKey',
         responseKind: 'json',
       };
-    case 'camofox_import_cookies':
+    case 'chusky_import_cookies':
       // Async (Netscape parse + path check) — caller must use buildCookieRequest().
-      throw new Error('camofox_import_cookies requires buildCookieRequest() (async cookie parsing)');
-    case 'camofox_handoff_start':
+      throw new Error('chusky_import_cookies requires buildCookieRequest() (async cookie parsing)');
+    case 'chusky_handoff_start':
       return {
         method: 'POST',
         path: `/tabs/${encodeURIComponent(args.tabId)}/handoff`,
@@ -528,7 +528,7 @@ export function buildRequest(name, args, ctx) {
         responseKind: 'json',
         body: { userId, reason: args.reason, idleMs: args.idleMs },
       };
-    case 'camofox_handoff_release':
+    case 'chusky_handoff_release':
       return {
         method: 'POST',
         path: `/tabs/${encodeURIComponent(args.tabId)}/handoff/release`,
@@ -536,7 +536,7 @@ export function buildRequest(name, args, ctx) {
         responseKind: 'json',
         body: { userId },
       };
-    case 'camofox_pay_arm':
+    case 'chusky_pay_arm':
       return {
         method: 'POST',
         path: `/agentcard/tabs/${encodeURIComponent(args.tabId)}/payment`,
@@ -551,14 +551,14 @@ export function buildRequest(name, args, ctx) {
           cardId: args.cardId,
         },
       };
-    case 'camofox_pay_status':
+    case 'chusky_pay_status':
       return {
         method: 'GET',
         path: `/agentcard/tabs/${encodeURIComponent(args.tabId)}/payment/${encodeURIComponent(args.attachmentId)}?${new URLSearchParams({ userId })}`,
         auth: 'accessKey',
         responseKind: 'json',
       };
-    case 'camofox_pay_disarm':
+    case 'chusky_pay_disarm':
       return {
         method: 'DELETE',
         path: `/agentcard/tabs/${encodeURIComponent(args.tabId)}/payment/${encodeURIComponent(args.attachmentId)}?${new URLSearchParams({ userId })}`,
@@ -639,12 +639,12 @@ export function buildRequest(name, args, ctx) {
  * @param {CallContext} ctx
  * @param {{apiKey: string, cookiesDir: string}} config - server config (apiKey + cookiesDir).
  * @returns {Promise<RequestSpec & {meta: {imported: number, userId: string}}>}
- * @throws {Error} if CAMOFOX_API_KEY is unset.
+ * @throws {Error} if CHUSKY_API_KEY is unset.
  */
 export async function buildCookieRequest(args, ctx, config) {
   if (!config.apiKey) {
     throw new Error(
-      'CAMOFOX_API_KEY is not set. Cookie import is disabled unless both the server and the host (MCP/OpenClaw) have CAMOFOX_API_KEY.'
+      'CHUSKY_API_KEY is not set. Cookie import is disabled unless both the server and the host (MCP/OpenClaw) have CHUSKY_API_KEY.'
     );
   }
   const cookies = await readCookieFile({
@@ -733,7 +733,7 @@ export async function fetchSpec(baseUrl, spec, config) {
  */
 export async function runTool(name, args, ctx, baseUrl, config) {
   const spec =
-    name === 'camofox_import_cookies'
+    name === 'chusky_import_cookies'
       ? await buildCookieRequest(args, ctx, config)
       : buildRequest(name, args, ctx);
   const payload = await fetchSpec(baseUrl, spec, config);

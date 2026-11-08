@@ -1,8 +1,8 @@
 /**
  * Test the features added on feature/browser-experience against a running
- * Camofox server.
+ * Chusky server.
  *
- * Usage (reads CAMOFOX_BASE_URL and CAMOFOX_ACCESS_KEY from the environment or .env):
+ * Usage (reads CHUSKY_BASE_URL and CHUSKY_ACCESS_KEY from the environment or .env):
  *   node scripts/test-branch-features.mjs
  *   node scripts/test-branch-features.mjs https://example.org/some-page https://news.example.com/
  *
@@ -29,11 +29,11 @@ import { loadEnvFile } from 'node:process';
 const envPath = resolve(process.cwd(), '.env');
 if (existsSync(envPath)) loadEnvFile(envPath);
 
-const BASE = (process.env.CAMOFOX_BASE_URL || '').trim().replace(/\/+$/, '');
-const ACCESS_KEY = (process.env.CAMOFOX_ACCESS_KEY || process.env.CAMOFOX_API_KEY || '').trim();
+const BASE = (process.env.CHUSKY_BASE_URL || '').trim().replace(/\/+$/, '');
+const ACCESS_KEY = (process.env.CHUSKY_ACCESS_KEY || process.env.CHUSKY_API_KEY || '').trim();
 
-if (!BASE) throw new Error('Missing CAMOFOX_BASE_URL (set it in .env or the environment).');
-if (!ACCESS_KEY) throw new Error('Missing CAMOFOX_ACCESS_KEY (set it in .env or the environment).');
+if (!BASE) throw new Error('Missing CHUSKY_BASE_URL (set it in .env or the environment).');
+if (!ACCESS_KEY) throw new Error('Missing CHUSKY_ACCESS_KEY (set it in .env or the environment).');
 
 const userId = `branch-test-${randomUUID()}`;
 const sessionKey = `branch-test-${randomUUID()}`;

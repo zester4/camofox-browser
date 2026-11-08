@@ -67,7 +67,7 @@ if [ ! -d "$NOVNC_DIR" ]; then
 fi
 VNC_BIND="${VNC_BIND:-127.0.0.1}"
 log "Starting noVNC (websockify) on $VNC_BIND:$NOVNC_PORT -> 127.0.0.1:$VNC_PORT"
-websockify --web "$NOVNC_DIR" "$VNC_BIND:$NOVNC_PORT" "127.0.0.1:$VNC_PORT" >/tmp/camofox-novnc.log 2>&1 &
+websockify --web "$NOVNC_DIR" "$VNC_BIND:$NOVNC_PORT" "127.0.0.1:$VNC_PORT" >/tmp/chusky-novnc.log 2>&1 &
 
 log "VNC watcher started -- will attach x11vnc when Camoufox's Xvfb appears"
 
@@ -75,7 +75,7 @@ find_owned_display() {
   # Camoufox normally starts Xvfb with -displayfd, so its display number is not
   # present in argv. First identify this server's Xvfb child, then map its PID
   # through Xvfb's lock file to the corresponding X socket. This retains the
-  # per-server ownership isolation needed when several Camofox servers share a
+  # per-server ownership isolation needed when several Chusky servers share a
   # process namespace.
   XVFB_PID=$(ps -eo pid=,ppid=,args= 2>/dev/null | find_owned_xvfb_pid "$SERVER_PID" "$VNC_RESOLUTION")
   [ -n "$XVFB_PID" ] || return 0
@@ -106,7 +106,7 @@ while true; do
     CURRENT_DISPLAY="$FOUND"
     log "Attaching x11vnc to DISPLAY=$CURRENT_DISPLAY"
 
-    X11VNC_ARGS="-display $CURRENT_DISPLAY -forever -shared $X11VNC_LISTEN -rfbport $VNC_PORT -noxdamage -quiet -bg -o /tmp/camofox-x11vnc.log"
+    X11VNC_ARGS="-display $CURRENT_DISPLAY -forever -shared $X11VNC_LISTEN -rfbport $VNC_PORT -noxdamage -quiet -bg -o /tmp/chusky-x11vnc.log"
     [ "${VIEW_ONLY:-0}" = "1" ] && X11VNC_ARGS="$X11VNC_ARGS -viewonly"
     if [ -n "$PASSFILE" ]; then
       X11VNC_ARGS="$X11VNC_ARGS -rfbauth $PASSFILE"

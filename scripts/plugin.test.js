@@ -11,7 +11,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 const SCRIPT = path.join(ROOT, 'scripts', 'plugin.js');
 const PLUGINS_DIR = path.join(ROOT, 'plugins');
-const CONFIG_PATH = path.join(ROOT, 'camofox.config.json');
+const CONFIG_PATH = path.join(ROOT, 'chusky.config.json');
 
 const run = (args) => execSync(`node ${SCRIPT} ${args}`, { cwd: ROOT, encoding: 'utf-8' });
 

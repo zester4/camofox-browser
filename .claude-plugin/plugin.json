@@ -1,12 +1,12 @@
 {
-  "name": "camofox-browser",
-  "displayName": "Camofox Browser",
+  "name": "chuskybrowser",
+  "displayName": "Chusky Browser",
   "version": "1.18.1",
-  "description": "Browse the web with Camofox, a Firefox-based anti-detection browser with live view and human handoff. Pay on sites with the user's own card through AgentCard, with the user approving each payment on their device.",
+  "description": "Browse the web with Chusky, a Firefox-based anti-detection browser with live view and human handoff. Pay on sites with the user's own card through AgentCard, with the user approving each payment on their device.",
   "license": "MIT",
   "keywords": [
     "browser",
-    "camofox",
+    "chusky",
     "agentcard",
     "payments",
     "mcp"

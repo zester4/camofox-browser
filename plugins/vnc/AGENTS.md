@@ -9,7 +9,7 @@ Interactive browser access via noVNC. Log into sites visually, solve CAPTCHAs, a
 
 ## Activation
 
-Disabled by default. Enable with `ENABLE_VNC=1` env var or `"vnc": { "enabled": true }` in `camofox.config.json`.
+Disabled by default. Enable with `ENABLE_VNC=1` env var or `"vnc": { "enabled": true }` in `chusky.config.json`.
 
 ## Key Files
 

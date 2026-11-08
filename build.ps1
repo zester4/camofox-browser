@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Build and manage camofox-browser on Windows (PowerShell alternative to Makefile).
+    Build and manage chuskybrowser on Windows (PowerShell alternative to Makefile).
 
 .DESCRIPTION
     Provides the same targets as the Makefile for Windows users without make:
@@ -25,7 +25,7 @@
     Camoufox release channel (default: beta.24).
 
 .PARAMETER ContainerName
-    Docker container name (default: camofox-browser).
+    Docker container name (default: chuskybrowser).
 
 .PARAMETER HostPort
     Host port to map (default: 9377).
@@ -45,7 +45,7 @@ param(
 
     [string]$CamoufoxVersion = '135.0.1',
     [string]$CamoufoxRelease = 'beta.24',
-    [string]$ContainerName = 'camofox-browser',
+    [string]$ContainerName = 'chuskybrowser',
     [int]$HostPort = 9377
 )
 
@@ -54,7 +54,7 @@ $ProjectRoot = Split-Path -Parent $PSCommandPath
 $DistDir = Join-Path $ProjectRoot 'dist'
 $CamoufoxZip = Join-Path $DistDir "camoufox-$Arch.zip"
 $YtDlpBin = Join-Path $DistDir "yt-dlp-$Arch"
-$ImageTag = "camofox-browser:$CamoufoxVersion-$Arch"
+$ImageTag = "chuskybrowser:$CamoufoxVersion-$Arch"
 $ContainerPort = 9377
 
 # Map architecture to upstream release filenames

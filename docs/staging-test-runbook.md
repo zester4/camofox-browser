@@ -1,6 +1,6 @@
 # Staging test runbook
 
-Instructions for running live tests against the staging Camofox server on Railway.
+Instructions for running live tests against the staging Chusky server on Railway.
 Written so Claude can follow it without asking again.
 
 ## 1. Setup (once per session)
@@ -8,14 +8,14 @@ Written so Claude can follow it without asking again.
 The user sends staging values. Write them to `.env` in the repo root. Never commit `.env` (it is git-ignored) and never paste the access key into chat, docs, or commit messages.
 
 ```
-CAMOFOX_BASE_URL=https://<staging-host>.up.railway.app
-CAMOFOX_ACCESS_KEY=<staging access key>
+CHUSKY_BASE_URL=https://<staging-host>.up.railway.app
+CHUSKY_ACCESS_KEY=<staging access key>
 ```
 
 Rules:
-- Use `CAMOFOX_BASE_URL` for the staging host only. If it is missing or not `https`, stop and ask.
+- Use `CHUSKY_BASE_URL` for the staging host only. If it is missing or not `https`, stop and ask.
 - Use only staging values. If the user sends a production URL or key, do not use it. Ask them to confirm it is staging.
-- Check the server is up before any test: `curl -s -o /dev/null -w "%{http_code}" "$CAMOFOX_BASE_URL/health"` should return `200`.
+- Check the server is up before any test: `curl -s -o /dev/null -w "%{http_code}" "$CHUSKY_BASE_URL/health"` should return `200`.
 
 ## 2. Confirm the branch under test
 

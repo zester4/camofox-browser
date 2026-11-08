@@ -18,7 +18,7 @@ else
   YTDLP_ARCH    :=
 endif
 
-IMAGE        := camofox-browser:$(VERSION)-$(ARCH)
+IMAGE        := chuskybrowser:$(VERSION)-$(ARCH)
 CAMOUFOX_ZIP := dist/camoufox-$(ARCH).zip
 YTDLP_BIN    := dist/yt-dlp-$(ARCH)
 
@@ -63,14 +63,14 @@ up:
 	@if ! docker image inspect $(IMAGE) > /dev/null 2>&1; then \
 	  $(MAKE) build; \
 	fi
-	docker run -d --restart unless-stopped --name camofox-browser --shm-size=2g -p 9377:9377 $(IMAGE)
+	docker run -d --restart unless-stopped --name chuskybrowser --shm-size=2g -p 9377:9377 $(IMAGE)
 
 down:
-	docker stop camofox-browser && docker rm camofox-browser
+	docker stop chuskybrowser && docker rm chuskybrowser
 
 reset:
-	-docker stop camofox-browser 2>/dev/null
-	-docker rm camofox-browser 2>/dev/null
+	-docker stop chuskybrowser 2>/dev/null
+	-docker rm chuskybrowser 2>/dev/null
 	-docker rmi $(IMAGE) 2>/dev/null
 	$(MAKE) build
 

@@ -6,7 +6,7 @@ import { resolveUploadPaths } from '../../lib/upload-paths.js';
 
 describe('resolveUploadPaths', () => {
   test('allows files and symlinks that resolve inside the upload directory', async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'camofox-uploads-'));
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'chusky-uploads-'));
     try {
       const nested = path.join(root, 'nested');
       const file = path.join(nested, 'file.txt');
@@ -22,8 +22,8 @@ describe('resolveUploadPaths', () => {
   });
 
   test('rejects traversal and symlinks outside the upload directory', async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'camofox-uploads-'));
-    const outside = await fs.mkdtemp(path.join(os.tmpdir(), 'camofox-outside-'));
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'chusky-uploads-'));
+    const outside = await fs.mkdtemp(path.join(os.tmpdir(), 'chusky-outside-'));
     try {
       const outsideFile = path.join(outside, 'secret.txt');
       await fs.writeFile(outsideFile, 'secret');
@@ -38,7 +38,7 @@ describe('resolveUploadPaths', () => {
     }
   });
   test('rejects empty, relative, and non-regular file paths', async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'camofox-uploads-'));
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'chusky-uploads-'));
     try {
       const directory = path.join(root, 'directory');
       await fs.mkdir(directory);
@@ -56,7 +56,7 @@ describe('resolveUploadPaths', () => {
 
   test('rejects an unavailable upload directory', async () => {
     await expect(resolveUploadPaths({
-      uploadsDir: path.join(os.tmpdir(), 'camofox-missing-uploads-directory'),
+      uploadsDir: path.join(os.tmpdir(), 'chusky-missing-uploads-directory'),
       filePaths: [],
     })).rejects.toMatchObject({ code: 'uploads_dir_not_found' });
   });

@@ -1,6 +1,6 @@
-// Minimal Camofox client. One instance per end user.
+// Minimal Chusky client. One instance per end user.
 //
-//   import { forUser } from './camofox-client.mjs';
+//   import { forUser } from './chusky-client.mjs';
 //   const browser = forUser(userIdFromYourSession);   // NEVER from user-typed text
 //   const { tabId } = await browser.openTab({ url, sessionKey: taskId });
 //
@@ -9,20 +9,20 @@ import { loadDotEnv } from './lib-env.mjs';
 
 const ENV = { ...loadDotEnv(), ...process.env };
 
-export class CamofoxError extends Error {
+export class ChuskyError extends Error {
   constructor(message, status, body) {
     super(message);
-    this.name = 'CamofoxError';
+    this.name = 'ChuskyError';
     this.status = status;
     this.code = body?.code || body?.error || null;
     this.body = body;
   }
 }
 
-export class CamofoxClient {
-  constructor({ baseUrl = ENV.CAMOFOX_BASE_URL, accessKey = ENV.CAMOFOX_ACCESS_KEY, userId } = {}) {
-    if (!baseUrl) throw new Error('CAMOFOX_BASE_URL is not set.');
-    if (!accessKey) throw new Error('CAMOFOX_ACCESS_KEY is not set.');
+export class ChuskyClient {
+  constructor({ baseUrl = ENV.CHUSKY_BASE_URL, accessKey = ENV.CHUSKY_ACCESS_KEY, userId } = {}) {
+    if (!baseUrl) throw new Error('CHUSKY_BASE_URL is not set.');
+    if (!accessKey) throw new Error('CHUSKY_ACCESS_KEY is not set.');
     if (typeof userId !== 'string' || !userId.trim()) {
       throw new Error('userId is required. Pass the end user\'s ID from your authenticated session.');
     }
@@ -48,7 +48,7 @@ export class CamofoxClient {
     let data = null;
     try { data = text ? JSON.parse(text) : null; } catch { data = { raw: text.slice(0, 200) }; }
     if (!res.ok) {
-      throw new CamofoxError(`Camofox ${method} ${path} failed (HTTP ${res.status}): ${data?.error || data?.code || 'no detail'}`, res.status, data);
+      throw new ChuskyError(`Chusky ${method} ${path} failed (HTTP ${res.status}): ${data?.error || data?.code || 'no detail'}`, res.status, data);
     }
     return data;
   }
@@ -115,7 +115,7 @@ export class CamofoxClient {
 }
 
 export function forUser(userId, options = {}) {
-  return new CamofoxClient({ ...options, userId });
+  return new ChuskyClient({ ...options, userId });
 }
 
 function enc(v) { return encodeURIComponent(String(v)); }

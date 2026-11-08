@@ -76,7 +76,7 @@ async function checkServerRunning(baseUrl) {
 }
 async function fetchApi(baseUrl, path, options = {}) {
     // Forward the global access key so plugin traffic is accepted by REST servers
-    // gated with CAMOFOX_ACCESS_KEY. /health is exempt server-side, so attaching
+    // gated with CHUSKY_ACCESS_KEY. /health is exempt server-side, so attaching
     // the header to health checks is harmless.
     const cfg = loadConfig();
     const headers = {
@@ -100,7 +100,7 @@ export default function register(api) {
     const baseUrl = cfg.url || `http://localhost:${port}`;
     const autoStart = cfg.autoStart !== false; // default true
     const pluginDir = getPluginDir();
-    const fallbackUserId = `camofox-${randomUUID()}`;
+    const fallbackUserId = `chusky-${randomUUID()}`;
     // Auto-start server if configured (default: true)
     if (autoStart) {
         (async () => {
@@ -138,7 +138,7 @@ export default function register(api) {
         }), { name: def.name });
     }
     api.registerCommand({
-        name: "camofox",
+        name: "chusky",
         description: "Camoufox browser server control (status, start, stop)",
         handler: async ({ args }) => {
             const subcommand = args?.trim().split(/\s+/, 1)[0] || "status";
@@ -179,7 +179,7 @@ export default function register(api) {
     });
     // Gateway methods expose health/status to gateway clients. Gateway handlers
     // answer through respond() rather than returning a value.
-    api.registerGatewayMethod("camofox.health", async ({ respond }) => {
+    api.registerGatewayMethod("chusky.health", async ({ respond }) => {
         try {
             const health = (await fetchApi(baseUrl, "/health"));
             respond(true, { status: "ok", ...health });
@@ -188,7 +188,7 @@ export default function register(api) {
             respond(true, { status: "error", error: err.message });
         }
     }, { scope: "operator.admin" });
-    api.registerGatewayMethod("camofox.status", async ({ respond }) => {
+    api.registerGatewayMethod("chusky.status", async ({ respond }) => {
         const running = await checkServerRunning(baseUrl);
         respond(true, {
             running,
@@ -198,13 +198,13 @@ export default function register(api) {
             port,
         });
     }, { scope: "operator.admin" });
-    // Register CLI subcommands (openclaw camofox ...)
+    // Register CLI subcommands (openclaw chusky ...)
     if (api.registerCli) {
         api.registerCli(({ program }) => {
-            const camofox = program
-                .command("camofox")
+            const chusky = program
+                .command("chusky")
                 .description("Camoufox anti-detection browser automation");
-            camofox
+            chusky
                 .command("status")
                 .description("Show server status")
                 .action(async () => {
@@ -220,12 +220,12 @@ export default function register(api) {
                     console.log(`Camoufox server: not reachable`);
                     console.log(`  URL: ${baseUrl}`);
                     console.log(`  Managed: ${serverProcess !== null}`);
-                    console.log(`  Hint: Run 'openclaw camofox start' to start the server`);
+                    console.log(`  Hint: Run 'openclaw chusky start' to start the server`);
                 }
             });
-            camofox
+            chusky
                 .command("start")
-                .description("Start the camofox server")
+                .description("Start the chusky server")
                 .action(async () => {
                 if (serverProcess) {
                     console.log("Camoufox server already running (managed by plugin)");
@@ -236,7 +236,7 @@ export default function register(api) {
                     return;
                 }
                 try {
-                    console.log(`Starting camofox server on port ${port}...`);
+                    console.log(`Starting chusky server on port ${port}...`);
                     serverProcess = await startServer(pluginDir, port, api.logger, cfg);
                     console.log(`Camoufox server started at ${baseUrl}`);
                 }
@@ -245,22 +245,22 @@ export default function register(api) {
                     process.exit(1);
                 }
             });
-            camofox
+            chusky
                 .command("stop")
-                .description("Stop the camofox server")
+                .description("Stop the chusky server")
                 .action(async () => {
                 if (serverProcess) {
                     serverProcess.kill();
                     serverProcess = null;
-                    console.log("Stopped camofox server");
+                    console.log("Stopped chusky server");
                 }
                 else {
                     console.log("No managed server process running");
                 }
             });
-            camofox
+            chusky
                 .command("configure")
-                .description("Configure camofox plugin settings")
+                .description("Configure chusky plugin settings")
                 .action(async () => {
                 console.log("Camoufox Browser Configuration");
                 console.log("================================");
@@ -274,20 +274,20 @@ export default function register(api) {
                 console.log("");
                 console.log("  plugins:");
                 console.log("    entries:");
-                console.log("      camofox-browser:");
+                console.log("      chuskybrowser:");
                 console.log("        enabled: true");
                 console.log("        config:");
                 console.log("          port: 9377");
                 console.log("          autoStart: true");
                 console.log("");
-                console.log("To use camofox as the ONLY browser tool, disable the built-in:");
+                console.log("To use chusky as the ONLY browser tool, disable the built-in:");
                 console.log("");
                 console.log("  tools:");
                 console.log('    deny: ["browser"]');
                 console.log("");
-                console.log("This removes OpenClaw's built-in browser tool, leaving camofox tools.");
+                console.log("This removes OpenClaw's built-in browser tool, leaving chusky tools.");
             });
-            camofox
+            chusky
                 .command("tabs")
                 .description("List active browser tabs")
                 .option("--user <userId>", "Filter by user ID")
@@ -308,6 +308,6 @@ export default function register(api) {
                     console.error(`Failed to list tabs: ${err.message}`);
                 }
             });
-        }, { commands: ["camofox"] });
+        }, { commands: ["chusky"] });
     }
 }

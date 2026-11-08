@@ -12,25 +12,25 @@ afterEach(() => {
 
 describe('loadConfig', () => {
   test('reads the optional API bind host and forwards it to server subprocesses', () => {
-    process.env.CAMOFOX_BIND_HOST = '127.0.0.1';
+    process.env.CHUSKY_BIND_HOST = '127.0.0.1';
 
     const config = loadConfig();
 
     expect(config.bindHost).toBe('127.0.0.1');
-    expect(config.serverEnv.CAMOFOX_BIND_HOST).toBe('127.0.0.1');
+    expect(config.serverEnv.CHUSKY_BIND_HOST).toBe('127.0.0.1');
   });
 
   test('prefers CAMOUFOX_EXECUTABLE for external Camoufox executable', () => {
     process.env.CAMOUFOX_EXECUTABLE = '/nix/store/camoufox/bin/camoufox';
     process.env.CAMOUFOX_EXECUTABLE_PATH = '/ignored/camoufox';
-    process.env.CAMOFOX_EXECUTABLE_PATH = '/also-ignored/camoufox';
+    process.env.CHUSKY_EXECUTABLE_PATH = '/also-ignored/camoufox';
 
     const config = loadConfig();
 
     expect(config.camoufoxExecutablePath).toBe('/nix/store/camoufox/bin/camoufox');
     expect(config.serverEnv.CAMOUFOX_EXECUTABLE).toBe('/nix/store/camoufox/bin/camoufox');
     expect(config.serverEnv.CAMOUFOX_EXECUTABLE_PATH).toBe('/ignored/camoufox');
-    expect(config.serverEnv.CAMOFOX_EXECUTABLE_PATH).toBe('/also-ignored/camoufox');
+    expect(config.serverEnv.CHUSKY_EXECUTABLE_PATH).toBe('/also-ignored/camoufox');
   });
 
   test('accepts compatibility executable env vars', () => {
@@ -38,7 +38,7 @@ describe('loadConfig', () => {
     expect(loadConfig().camoufoxExecutablePath).toBe('/compat/camoufox');
 
     delete process.env.CAMOUFOX_EXECUTABLE_PATH;
-    process.env.CAMOFOX_EXECUTABLE_PATH = '/legacy/camoufox';
+    process.env.CHUSKY_EXECUTABLE_PATH = '/legacy/camoufox';
     expect(loadConfig().camoufoxExecutablePath).toBe('/legacy/camoufox');
   });
 
@@ -51,45 +51,45 @@ describe('loadConfig', () => {
   });
 
   test('configures an optional direct browser identity and forwards it to subprocesses', () => {
-    process.env.CAMOFOX_LOCALE = 'en-AU';
-    process.env.CAMOFOX_TIMEZONE = 'Australia/Sydney';
+    process.env.CHUSKY_LOCALE = 'en-AU';
+    process.env.CHUSKY_TIMEZONE = 'Australia/Sydney';
 
     const config = loadConfig();
 
     expect(config.directIdentity).toEqual({ locale: 'en-AU', timezoneId: 'Australia/Sydney' });
-    expect(config.serverEnv.CAMOFOX_LOCALE).toBe('en-AU');
-    expect(config.serverEnv.CAMOFOX_TIMEZONE).toBe('Australia/Sydney');
+    expect(config.serverEnv.CHUSKY_LOCALE).toBe('en-AU');
+    expect(config.serverEnv.CHUSKY_TIMEZONE).toBe('Australia/Sydney');
   });
 
   test('does not set a direct browser identity unless both values are configured', () => {
-    delete process.env.CAMOFOX_LOCALE;
-    delete process.env.CAMOFOX_TIMEZONE;
+    delete process.env.CHUSKY_LOCALE;
+    delete process.env.CHUSKY_TIMEZONE;
     expect(loadConfig().directIdentity).toBeNull();
 
-    process.env.CAMOFOX_LOCALE = 'en-AU';
-    expect(() => loadConfig()).toThrow('CAMOFOX_LOCALE and CAMOFOX_TIMEZONE must be set together');
+    process.env.CHUSKY_LOCALE = 'en-AU';
+    expect(() => loadConfig()).toThrow('CHUSKY_LOCALE and CHUSKY_TIMEZONE must be set together');
 
-    process.env.CAMOFOX_TIMEZONE = 'Not/A_Timezone';
-    expect(() => loadConfig()).toThrow('CAMOFOX_TIMEZONE must be a valid IANA timezone');
+    process.env.CHUSKY_TIMEZONE = 'Not/A_Timezone';
+    expect(() => loadConfig()).toThrow('CHUSKY_TIMEZONE must be a valid IANA timezone');
   });
 
   test('configures and forwards the upload directory', () => {
-    process.env.CAMOFOX_UPLOADS_DIR = '/mounted/uploads';
+    process.env.CHUSKY_UPLOADS_DIR = '/mounted/uploads';
 
     const config = loadConfig();
 
     expect(config.uploadsDir).toBe('/mounted/uploads');
-    expect(config.serverEnv.CAMOFOX_UPLOADS_DIR).toBe('/mounted/uploads');
+    expect(config.serverEnv.CHUSKY_UPLOADS_DIR).toBe('/mounted/uploads');
   });
 
   test('configures and forwards the evaluate body size limit', () => {
-    delete process.env.CAMOFOX_EVALUATE_MAX_BODY_SIZE;
+    delete process.env.CHUSKY_EVALUATE_MAX_BODY_SIZE;
     expect(loadConfig().evaluateMaxBodySize).toBe('1mb');
 
-    process.env.CAMOFOX_EVALUATE_MAX_BODY_SIZE = '10mb';
+    process.env.CHUSKY_EVALUATE_MAX_BODY_SIZE = '10mb';
     const config = loadConfig();
     expect(config.evaluateMaxBodySize).toBe('10mb');
-    expect(config.serverEnv.CAMOFOX_EVALUATE_MAX_BODY_SIZE).toBe('10mb');
+    expect(config.serverEnv.CHUSKY_EVALUATE_MAX_BODY_SIZE).toBe('10mb');
   });
 
   test('preserves zero timeout values to disable session expiry and idle shutdown', () => {
@@ -132,9 +132,9 @@ describe('loadConfig', () => {
     expect(config.serverEnv.NAVIGATE_TIMEOUT_MS).toBe('60000');
   });
 
-  test('reads newPageTimeoutMs from camofox.config.json with a 10s fallback', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'camofox-config-'));
-    const configPath = path.join(dir, 'camofox.config.json');
+  test('reads newPageTimeoutMs from chusky.config.json with a 10s fallback', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chusky-config-'));
+    const configPath = path.join(dir, 'chusky.config.json');
 
     fs.writeFileSync(configPath, JSON.stringify({ newPageTimeoutMs: 15000 }));
     expect(loadConfig({ configPath }).newPageTimeoutMs).toBe(15000);
@@ -146,17 +146,17 @@ describe('loadConfig', () => {
   });
 
   test('enables desktop interactive mode from the environment and forwards it to server subprocesses', () => {
-    process.env.CAMOFOX_INTERACTIVE = 'desktop';
+    process.env.CHUSKY_INTERACTIVE = 'desktop';
 
     const config = loadConfig();
 
     expect(config.interactiveMode).toBe('desktop');
-    expect(config.serverEnv.CAMOFOX_INTERACTIVE).toBe('desktop');
+    expect(config.serverEnv.CHUSKY_INTERACTIVE).toBe('desktop');
   });
 
-  test('reads interactive mode from camofox.config.json and rejects invalid modes', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'camofox-config-'));
-    const configPath = path.join(dir, 'camofox.config.json');
+  test('reads interactive mode from chusky.config.json and rejects invalid modes', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chusky-config-'));
+    const configPath = path.join(dir, 'chusky.config.json');
 
     fs.writeFileSync(configPath, JSON.stringify({ interactive: { mode: 'desktop' } }));
     expect(loadConfig({ configPath }).interactiveMode).toBe('desktop');
@@ -166,20 +166,20 @@ describe('loadConfig', () => {
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
-  test('disables default addons when CAMOFOX_DISABLE_DEFAULT_ADDONS is set', () => {
-    delete process.env.CAMOFOX_DISABLE_DEFAULT_ADDONS;
+  test('disables default addons when CHUSKY_DISABLE_DEFAULT_ADDONS is set', () => {
+    delete process.env.CHUSKY_DISABLE_DEFAULT_ADDONS;
     expect(loadConfig().disableDefaultAddons).toBe(false);
 
-    process.env.CAMOFOX_DISABLE_DEFAULT_ADDONS = '0';
+    process.env.CHUSKY_DISABLE_DEFAULT_ADDONS = '0';
     expect(loadConfig().disableDefaultAddons).toBe(false);
 
-    process.env.CAMOFOX_DISABLE_DEFAULT_ADDONS = '1';
+    process.env.CHUSKY_DISABLE_DEFAULT_ADDONS = '1';
     expect(loadConfig().disableDefaultAddons).toBe(true);
 
-    process.env.CAMOFOX_DISABLE_DEFAULT_ADDONS = 'true';
+    process.env.CHUSKY_DISABLE_DEFAULT_ADDONS = 'true';
     const config = loadConfig();
     expect(config.disableDefaultAddons).toBe(true);
-    expect(config.serverEnv.CAMOFOX_DISABLE_DEFAULT_ADDONS).toBe('true');
+    expect(config.serverEnv.CHUSKY_DISABLE_DEFAULT_ADDONS).toBe('true');
   });
 
 });

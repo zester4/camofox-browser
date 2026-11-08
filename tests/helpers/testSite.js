@@ -276,7 +276,7 @@ function createTestApp() {
   });
 
   app.get('/download-file', (req, res) => {
-    const body = 'hello from camofox test download\n';
+    const body = 'hello from chusky test download\n';
     res.setHeader('Content-Type', 'application/octet-stream');
     res.setHeader('Content-Disposition', 'attachment; filename="hello.txt"');
     res.send(body);

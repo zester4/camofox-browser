@@ -242,9 +242,9 @@ const FLY_MACHINE_ID = fly.machineId;
 // Route tab requests to the owning machine via fly-replay header.
 app.use('/tabs/:tabId', fly.replayMiddleware(log));
 
-// Access-key middleware: gates every route when CAMOFOX_ACCESS_KEY is set.
+// Access-key middleware: gates every route when CHUSKY_ACCESS_KEY is set.
 // Exempts /health (Docker healthcheck) and routes that have their own
-// dedicated keys (cookie import -> CAMOFOX_API_KEY, /stop -> CAMOFOX_ADMIN_KEY)
+// dedicated keys (cookie import -> CHUSKY_API_KEY, /stop -> CHUSKY_ADMIN_KEY)
 // so each key gates a distinct surface. When unset, behavior is unchanged.
 app.use(accessKeyMiddleware(CONFIG));
 
@@ -1094,7 +1094,7 @@ const agentcardAttachments = new Map(); // attachmentId -> record
  *       Call before the agent clicks Pay in this tab. The next card request to a supported
  *       processor is paused, the user is asked to approve on their device, and AgentCard's
  *       response is replayed. Read the outcome with GET .../payment/{attachmentId}. The
- *       merchant's own confirmation still has to be read from the page. Works on Camofox
+ *       merchant's own confirmation still has to be read from the page. Works on Chusky
  *       (Firefox) and does not need Chromium.
  *     parameters:
  *       - { name: tabId, in: path, required: true, schema: { type: string } }
@@ -1488,7 +1488,7 @@ app.post('/sessions/:userId/cookies', express.json({ limit: '512kb' }), async (r
       if (!allowUnauthedLocal) {
         return res.status(403).json({
           error:
-            'Cookie import is disabled without CAMOFOX_API_KEY except for loopback requests in non-production environments.',
+            'Cookie import is disabled without CHUSKY_API_KEY except for loopback requests in non-production environments.',
         });
       }
     }
@@ -2916,7 +2916,7 @@ function pressureLockState(tabId) {
   };
 }
 
-async function camofoxPressureCleanup(options = {}) {
+async function chuskyPressureCleanup(options = {}) {
   const now = Date.now();
   const minIdleMs = Math.max(0, Number(options.minIdleMs ?? 10 * 60 * 1000));
   const maxTabsToClose = Math.max(0, Number(options.maxTabsToClose ?? 4));
@@ -3887,7 +3887,7 @@ app.get('/metrics', async (_req, res) => {
  */
 app.post('/pressure/cleanup', async (req, res) => {
   try {
-    const result = await camofoxPressureCleanup(req.body || {});
+    const result = await chuskyPressureCleanup(req.body || {});
     log('info', 'pressure cleanup', {
       dryRun: result.dryRun,
       beforeTabs: result.before.tabs,
@@ -4004,7 +4004,7 @@ app.post('/tabs', async (req, res) => {
         log('info', 'session overflow redirect', {
           userId: key, sessions: sessions.size, cap: PER_MACHINE_SESSION_CAP,
         });
-        res.set('fly-replay', `app=${CONFIG.flyAppName || 'camofox-browser'}`);
+        res.set('fly-replay', `app=${CONFIG.flyAppName || 'chuskybrowser'}`);
         return res.status(307).send();
       }
     }
@@ -4137,7 +4137,7 @@ app.post('/tabs', async (req, res) => {
     }
     // Memory pressure / max sessions → bounce through LB to another machine
     if (FLY_MACHINE_ID && err.statusCode === 503) {
-      res.set('fly-replay', `app=${CONFIG.flyAppName || 'camofox-browser'}`);
+      res.set('fly-replay', `app=${CONFIG.flyAppName || 'chuskybrowser'}`);
       return res.status(503).json({ error: safeError(err), code: err.code || 'admission_rejected' });
     }
     handleRouteError(err, req, res);
@@ -5427,8 +5427,8 @@ const UPLOAD_SETTLE_MS = 1500; // let the page process the upload / render a pre
  *     summary: Attach a file to an upload control
  *     description: >
  *       Attaches files from the configured upload directory without going through
- *       the native OS file dialog. Set CAMOFOX_UPLOADS_DIR to a directory that
- *       contains the files (default: ~/.camofox/uploads). Two strategies are
+ *       the native OS file dialog. Set CHUSKY_UPLOADS_DIR to a directory that
+ *       contains the files (default: ~/.chusky/uploads). Two strategies are
  *       tried in order: (1) if an
  *       <input type="file"> is already present, call Playwright setInputFiles
  *       on it directly (works for hidden inputs); (2) otherwise arm a
@@ -5452,7 +5452,7 @@ const UPLOAD_SETTLE_MS = 1500; // let the page process the upload / render a pre
  *               userId:
  *                 type: string
  *               path:
- *                 description: "Absolute path, or array of paths, that resolves within CAMOFOX_UPLOADS_DIR."
+ *                 description: "Absolute path, or array of paths, that resolves within CHUSKY_UPLOADS_DIR."
  *                 oneOf:
  *                   - type: string
  *                   - type: array

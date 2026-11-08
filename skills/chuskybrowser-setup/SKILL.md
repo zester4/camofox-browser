@@ -1,16 +1,16 @@
 ---
-name: camofox-browser-setup
-description: Set up and use a Camofox browser server from an agent or app. Covers deploying it, the base URL and access key, one userId per end user, reading pages as JSON, and handing a tab to a person for logins or checks.
+name: chuskybrowser-setup
+description: Set up and use a Chusky browser server from an agent or app. Covers deploying it, the base URL and access key, one userId per end user, reading pages as JSON, and handing a tab to a person for logins or checks.
 ---
 
-# Camofox browser: setup and use
+# Chusky browser: setup and use
 
-Camofox is a browser server that agents control over HTTP. An agent opens tabs, reads pages, extracts data as JSON, and can pause so a person can act on a tab (sign in, enter a code, solve a check) before it continues.
+Chusky is a browser server that agents control over HTTP. An agent opens tabs, reads pages, extracts data as JSON, and can pause so a person can act on a tab (sign in, enter a code, solve a check) before it continues.
 
 This skill has three parts. Read only the one you need:
 
 - **Setting up a server:** `references/deploy-railway.md`, then `scripts/setup-env.mjs` and `scripts/check-server.mjs`.
-- **Calling it from code:** `references/api.md` and `scripts/camofox-client.mjs`.
+- **Calling it from code:** `references/api.md` and `scripts/chusky-client.mjs`.
 - **Logins, handoffs and security:** `references/handoff-and-logins.md` and `references/security.md`.
 
 If you are an MCP client, see `references/mcp.md`. Plain REST works everywhere, so use MCP only when it fits.
@@ -32,7 +32,7 @@ node scripts/check-server.mjs                                           # health
 
 ## The main flow
 
-Use `scripts/camofox-client.mjs`, or the same calls over REST (see `references/api.md`).
+Use `scripts/chusky-client.mjs`, or the same calls over REST (see `references/api.md`).
 
 1. **Open** a tab: `openTab({ url, sessionKey })`. The `sessionKey` groups the tabs of one task.
 2. **Navigate** if needed: `navigate(tabId, url)`. Search macros such as `@google_search` also work.
@@ -57,7 +57,7 @@ Never ask the user to type a password in chat. The handoff exists so they type i
 
 | Status | Meaning | What to do |
 |---|---|---|
-| 401 | Access key missing or wrong | Check `CAMOFOX_ACCESS_KEY` on the client and the server match |
+| 401 | Access key missing or wrong | Check `CHUSKY_ACCESS_KEY` on the client and the server match |
 | 404 | Tab missing, closed, or owned by another userId | Check the userId, then open a new tab |
 | 409 `human_in_control` | A person holds the tab | Wait; tell the user |
 | 409 `handoff_not_active` | Control link asked for with no handoff | Call `checkpoint` or start a handoff first |
@@ -70,7 +70,7 @@ Never ask the user to type a password in chat. The handoff exists so they type i
 - Send a viewer link only to the user it was issued for.
 - Do not bypass robots.txt, site terms, or captchas. Hand off instead.
 - Do not run lookups about private individuals.
-- Logins persist only when the server has `CAMOFOX_STORAGE_KEY` set. Do not promise a saved login without checking.
+- Logins persist only when the server has `CHUSKY_STORAGE_KEY` set. Do not promise a saved login without checking.
 
 ## Payments with the user's own card (AgentCard)
 
@@ -82,16 +82,16 @@ agent or this server. Each payment needs the user's approval on their own device
 2. Shop, or pay on a page you control:
    - Stores and bookings: `agentcard_merchants` first, then `agentcard_buy`. Pass the
      shopper's words as `ask`. Set `confirm` only after the user says yes to the cart.
-   - Any checkout page: open it in a tab, then `camofox_pay_arm` with the merchant,
+   - Any checkout page: open it in a tab, then `chusky_pay_arm` with the merchant,
      the most the user can be charged in cents, and the currency.
-3. Poll `camofox_pay_status`. When `approvalUrl` appears, send it to the user unchanged.
+3. Poll `chusky_pay_status`. When `approvalUrl` appears, send it to the user unchanged.
    The page's card request waits until they approve with their passkey.
-4. Stop with `camofox_pay_disarm` when the checkout is done.
+4. Stop with `chusky_pay_disarm` when the checkout is done.
 
 Limits: set them with `agentcard_preset_set` (for example a weekly cap or allowed
 merchants). AgentCard enforces them before any approval.
 
 ## Handing a tab to the user
 
-`camofox_handoff_start` pauses the agent on a tab and returns a control link. Send it to
-the user only. `camofox_handoff_release` returns control to the agent.
+`chusky_handoff_start` pauses the agent on a tab and returns a control link. Send it to
+the user only. `chusky_handoff_release` returns control to the agent.

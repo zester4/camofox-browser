@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Package-level regression test for @askjo/camofox-browser-mcp.
+// Package-level regression test for chuskybrowser-mcp.
 // Packs mcp/, installs that tarball in an empty directory, then runs the same
 // MCP handshake smoke test against the installed server. This catches imports
 // that accidentally reach outside the published package.
@@ -14,7 +14,7 @@ import { promisify } from 'node:util';
 const execFile = promisify(execFileCallback);
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const MCP_DIR = join(ROOT, 'mcp');
-const testDir = await mkdtemp(join(tmpdir(), 'camofox-browser-mcp-package-'));
+const testDir = await mkdtemp(join(tmpdir(), 'chuskybrowser-mcp-package-'));
 let tarball;
 
 try {
@@ -28,10 +28,10 @@ try {
     cwd: installDir,
   });
 
-  const bin = join(installDir, 'node_modules', '.bin', 'camofox-browser-mcp');
+  const bin = join(installDir, 'node_modules', '.bin', 'chuskybrowser-mcp');
   await access(bin);
 
-  const server = join(installDir, 'node_modules', '@askjo', 'camofox-browser-mcp', 'server.mjs');
+  const server = join(installDir, 'node_modules', '@askjo', 'chuskybrowser-mcp', 'server.mjs');
   await execFile(process.execPath, [join(ROOT, 'scripts', 'test-mcp.mjs')], {
     cwd: ROOT,
     env: {
@@ -39,11 +39,11 @@ try {
       HOME: process.env.HOME,
       USER: process.env.USER,
       NODE_OPTIONS: process.env.NODE_OPTIONS || '',
-      CAMOFOX_BASE_URL: 'http://localhost:1',
-      CAMOFOX_MCP_SERVER: server,
+      CHUSKY_BASE_URL: 'http://localhost:1',
+      CHUSKY_MCP_SERVER: server,
     },
   });
-  console.log('packed @askjo/camofox-browser-mcp smoke test passed');
+  console.log('packed chuskybrowser-mcp smoke test passed');
 
   // The root package also exposes this MCP server as a bin. Its file allowlist
   // must include the manifest read by mcp/server.mjs at startup.

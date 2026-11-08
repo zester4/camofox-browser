@@ -8,7 +8,7 @@ describe('importBootstrapCookies', () => {
   let tmpDir;
 
   beforeEach(async () => {
-    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'camofox-bootstrap-cookies-'));
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'chusky-bootstrap-cookies-'));
   });
 
   afterEach(async () => {
@@ -81,7 +81,7 @@ describe('importBootstrapCookies', () => {
   });
 
   test('rejects traversal, absolute paths, and symlinks that resolve outside the cookie directory', async () => {
-    const outsideDir = await fs.mkdtemp(path.join(os.tmpdir(), 'camofox-outside-cookies-'));
+    const outsideDir = await fs.mkdtemp(path.join(os.tmpdir(), 'chusky-outside-cookies-'));
     const outsideFile = path.join(outsideDir, 'cookies.txt');
     await fs.writeFile(
       outsideFile,

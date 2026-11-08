@@ -12,7 +12,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const tempDirs = [];
 
 function makeExecutable() {
-  const dir = mkdtempSync(join(tmpdir(), 'camofox-postinstall-test-'));
+  const dir = mkdtempSync(join(tmpdir(), 'chusky-postinstall-test-'));
   tempDirs.push(dir);
   const executable = join(dir, 'camoufox-bin');
   writeFileSync(executable, '#!/bin/sh\nexit 0\n');
@@ -53,7 +53,7 @@ describe('postinstall external executable handling', () => {
     expect(externalExecutableFromEnv({
       CAMOUFOX_EXECUTABLE: '/primary',
       CAMOUFOX_EXECUTABLE_PATH: '/compat',
-      CAMOFOX_EXECUTABLE_PATH: '/legacy',
+      CHUSKY_EXECUTABLE_PATH: '/legacy',
     })).toEqual({ name: 'CAMOUFOX_EXECUTABLE', value: '/primary' });
   });
 

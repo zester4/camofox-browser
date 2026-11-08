@@ -2,11 +2,11 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 import {
-  camofoxPostBody,
-  camofoxRequest,
-  getCamofoxUserId,
-  readCamofoxJson,
-} from "../lib/camofox.js";
+  chuskyPostBody,
+  chuskyRequest,
+  getChuskyUserId,
+  readChuskyJson,
+} from "../lib/chusky.js";
 
 export default defineTool({
   description:
@@ -21,15 +21,15 @@ export default defineTool({
   }),
   outputSchema: z.object({}).passthrough(),
   async execute({ ask, threadId, confirm, new_order, product_id, store_id }, ctx) {
-    const userId = getCamofoxUserId(ctx.session.auth.current);
-    const response = await camofoxRequest(
+    const userId = getChuskyUserId(ctx.session.auth.current);
+    const response = await chuskyRequest(
       `/agentcard/commerce/buy`,
       userId,
       ctx.abortSignal,
       "agentcard buy",
       {
         method: "POST",
-        body: camofoxPostBody(userId, {
+        body: chuskyPostBody(userId, {
           ask,
           threadId,
           confirm: confirm === true,
@@ -39,6 +39,6 @@ export default defineTool({
         }),
       },
     );
-    return readCamofoxJson(response, "agentcard buy");
+    return readChuskyJson(response, "agentcard buy");
   },
 });

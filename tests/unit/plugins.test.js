@@ -81,7 +81,7 @@ describe('lib/plugins', () => {
     let tmpDir;
 
     beforeEach(() => {
-      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'camofox-plugin-test-'));
+      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'chusky-plugin-test-'));
     });
 
     afterEach(() => {
@@ -108,7 +108,7 @@ describe('lib/plugins', () => {
 
     test('loads config-disabled plugin when its enable env var is set', async () => {
       const pluginsDir = path.join(tmpDir, 'plugins');
-      const configPath = path.join(tmpDir, 'camofox.config.json');
+      const configPath = path.join(tmpDir, 'chusky.config.json');
       fs.mkdirSync(pluginsDir);
       makePlugin(
         pluginsDir,
@@ -150,13 +150,13 @@ describe('lib/plugins', () => {
       // The sibling plugin has no enable env var, so it stays skipped.
       expect(ctx.log).toHaveBeenCalledWith(
         'debug',
-        'plugin "disabled" not in camofox.config.json plugins list, skipping'
+        'plugin "disabled" not in chusky.config.json plugins list, skipping'
       );
     });
 
     test('skips config-disabled plugin when its enable env var is not set', async () => {
       const pluginsDir = path.join(tmpDir, 'plugins');
-      const configPath = path.join(tmpDir, 'camofox.config.json');
+      const configPath = path.join(tmpDir, 'chusky.config.json');
       fs.mkdirSync(pluginsDir);
       makePlugin(
         pluginsDir,
@@ -217,9 +217,9 @@ describe('lib/plugins', () => {
     // readPluginConfig is not exported, so we test its behavior
     // indirectly by verifying loadPlugins respects the config.
 
-    test('project camofox.config.json exists and is valid', () => {
+    test('project chusky.config.json exists and is valid', () => {
       const __dirname = path.dirname(fileURLToPath(import.meta.url));
-      const configPath = path.join(__dirname, '../../camofox.config.json');
+      const configPath = path.join(__dirname, '../../chusky.config.json');
       expect(fs.existsSync(configPath)).toBe(true);
 
       const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
@@ -233,7 +233,7 @@ describe('lib/plugins', () => {
 
     test('array format plugins are string lists', () => {
       const __dirname = path.dirname(fileURLToPath(import.meta.url));
-      const configPath = path.join(__dirname, '../../camofox.config.json');
+      const configPath = path.join(__dirname, '../../chusky.config.json');
       const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
 
       if (Array.isArray(config.plugins)) {
@@ -247,7 +247,7 @@ describe('lib/plugins', () => {
     test('each configured plugin has an index.js', () => {
       const __dirname = path.dirname(fileURLToPath(import.meta.url));
       const rootDir = path.join(__dirname, '../..');
-      const configPath = path.join(rootDir, 'camofox.config.json');
+      const configPath = path.join(rootDir, 'chusky.config.json');
       const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
 
       const pluginNames = Array.isArray(config.plugins)

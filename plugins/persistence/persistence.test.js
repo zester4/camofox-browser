@@ -28,7 +28,7 @@ describe('encrypted profile persistence', () => {
   let tmpDir;
 
   beforeEach(async () => {
-    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'camofox-persistence-'));
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'chusky-persistence-'));
   });
 
   afterEach(async () => {

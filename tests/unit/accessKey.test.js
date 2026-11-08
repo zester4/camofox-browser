@@ -1,6 +1,6 @@
 /**
  * Tests for accessKeyMiddleware (global access-key gate) and
- * requireAuth interaction with CAMOFOX_ACCESS_KEY (superkey behavior).
+ * requireAuth interaction with CHUSKY_ACCESS_KEY (superkey behavior).
  *
  * Uses mock req/res objects -- no server spawn needed.
  */
@@ -135,7 +135,7 @@ describe('accessKeyMiddleware', () => {
       const res = mockRes();
       const next = jest.fn();
       mw(req, res, next);
-      expect(res._headers['www-authenticate']).toBe('Bearer realm="camofox"');
+      expect(res._headers['www-authenticate']).toBe('Bearer realm="chusky"');
     });
 
     test('rejects request with wrong bearer token -> 401', () => {

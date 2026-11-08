@@ -203,7 +203,7 @@ async function fullCheck() {
     const handle = await service.attachPayment(page, {
       userId,
       cardId,
-      merchant: 'Camofox payment check',
+      merchant: 'Chusky payment check',
       amount: 100,
       currency: 'usd',
       checkoutOrigin: 'https://shop.example.com',
