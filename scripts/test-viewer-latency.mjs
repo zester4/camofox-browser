@@ -162,6 +162,7 @@ async function main() {
     const token = linkData?.url ? new URL(linkData.url).searchParams.get('t') : null;
     check('control link issued', Boolean(token), `HTTP ${link.status}`);
     if (!token) return;
+    console.log(`      watch and type here while the test runs (open in your browser):\n      ${linkData.url}`);
 
     // Click the box through the viewer, as the person would.
     const box = page.box();
