@@ -131,7 +131,6 @@
     root.classList.toggle('expanded', expandedMode && !minimized);
     doneBtn.hidden = !(canControl && controlActive);
     openLink.hidden = !controlActive;
-    expandBtn.hidden = minimized;
     expandBtn.setAttribute('aria-pressed', String(expandedMode));
     expandBtn.setAttribute('aria-label', expandedMode ? 'Exit full view' : 'Expand live view');
     setIcon(expandBtn.querySelector('[data-icon]'), expandedMode ? SVG_COLLAPSE : SVG_EXPAND);
@@ -139,7 +138,7 @@
     minBtn.setAttribute('aria-label', minimized ? 'Restore live view' : 'Minimize live view');
     // The host sizes this frame, so ask it to collapse to the bar when minimized (or restore).
     try {
-      window.parent.postMessage({ source: 'camofox-live-viewer', type: 'resize', minimized: minimized }, '*');
+      window.parent.postMessage({ source: 'camofox-live-viewer', type: 'resize', minimized: minimized, expanded: expandedMode && !minimized }, '*');
     } catch (err) { /* not embedded */ }
 
     var text = '';
@@ -268,8 +267,10 @@
     });
   });
 
+  // From the minimized bar, expand restores the view and opens it full size in one click.
   expandBtn.addEventListener('click', function () {
-    expandedMode = !expandedMode;
+    if (minimized) { minimized = false; expandedMode = true; }
+    else expandedMode = !expandedMode;
     render();
   });
 
