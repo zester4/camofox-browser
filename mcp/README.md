@@ -1,21 +1,21 @@
-# camofox-browser MCP server
+# chuskybrowser MCP server
 
-A standalone [Model Context Protocol](https://modelcontextprotocol.io) server that exposes camofox-browser to any MCP-compatible host — Claude Code, Cursor, etc. — without requiring OpenClaw.
+A standalone [Model Context Protocol](https://modelcontextprotocol.io) server that exposes chuskybrowser to any MCP-compatible host — Claude Code, Cursor, etc. — without requiring OpenClaw.
 
-It mirrors the existing OpenClaw plugin **1:1**: same 24 tool names, identical JSON-Schema parameters, and the same REST routes. Whether an agent reaches camofox via OpenClaw or MCP, the behavior is identical.
+It mirrors the existing OpenClaw plugin **1:1**: same 24 tool names, identical JSON-Schema parameters, and the same REST routes. Whether an agent reaches chusky via OpenClaw or MCP, the behavior is identical.
 
 The initial MCP server implementation was contributed by [@epicsagas](https://github.com/epicsagas).
 
 ## Architecture
 
-The MCP server is a thin stdio client over the camofox REST server. Two pieces:
+The MCP server is a thin stdio client over the chusky REST server. Two pieces:
 
 - **REST server** (`server.js`) — launches Camoufox, exposes the HTTP API on `:9377`. Run **once**, it stays up.
-- **MCP server** (`mcp/server.mjs`, exposed as the `camofox-browser-mcp` bin) — translates MCP tool calls into REST calls. Claude Code spawns one **per session**.
+- **MCP server** (`mcp/server.mjs`, exposed as the `chuskybrowser-mcp` bin) — translates MCP tool calls into REST calls. Claude Code spawns one **per session**.
 
-Registering the MCP server does **not** require being inside the camofox-browser checkout. The examples below work from any directory.
+Registering the MCP server does **not** require being inside the chuskybrowser checkout. The examples below work from any directory.
 
-`mcp/` is also an **independently installable package** (`@askjo/camofox-browser-mcp`, its own `package.json`). It depends on nothing but `@modelcontextprotocol/sdk` — no `camoufox-js`, `playwright-core`, `express`, or the ~300MB browser binary download that the core server pulls in. Tool names, JSON-Schema parameters, REST routes, and response shaping are defined in `mcp/lib/tool-contracts.mjs`, which ships inside the standalone package. The OpenClaw plugin (`plugin.ts`) imports the same canonical module, so the two hosts cannot drift. See **Option D** below if you only want the MCP adapter (e.g. pointing `CAMOFOX_BASE_URL` at a REST server running elsewhere).
+`mcp/` is also an **independently installable package** (`chuskybrowser-mcp`, its own `package.json`). It depends on nothing but `@modelcontextprotocol/sdk` — no `camoufox-js`, `playwright-core`, `express`, or the ~300MB browser binary download that the core server pulls in. Tool names, JSON-Schema parameters, REST routes, and response shaping are defined in `mcp/lib/tool-contracts.mjs`, which ships inside the standalone package. The OpenClaw plugin (`plugin.ts`) imports the same canonical module, so the two hosts cannot drift. See **Option D** below if you only want the MCP adapter (e.g. pointing `CHUSKY_BASE_URL` at a REST server running elsewhere).
 
 ## 1. Start the REST server
 
@@ -29,45 +29,45 @@ npm start     # → http://localhost:9377
 
 This stays running in the background. It does not need to be your cwd afterwards.
 
-## 2. Install the `camofox-browser-mcp` bin
+## 2. Install the `chuskybrowser-mcp` bin
 
-The MCP server is the same for every host — what differs is only the config file you paste into. First, make the `camofox-browser-mcp` bin available on your PATH. Pick one:
+The MCP server is the same for every host — what differs is only the config file you paste into. First, make the `chuskybrowser-mcp` bin available on your PATH. Pick one:
 
 ```bash
 # Option A — npm link (if you have the source checkout; picks up local edits)
 cd camofox-browser && npm link
 
 # Option B — global install (no source checkout needed)
-npm install -g @askjo/camofox-browser
+npm install -g chuskybrowser
 
 # Option C — npx (no install; runs the published standalone adapter)
 #   Use this wherever a command is expected below.
-npx -y @askjo/camofox-browser-mcp
+npx -y chuskybrowser-mcp
 
 # Option D — MCP adapter only, no core server deps (lightest footprint)
 #   Skips camoufox-js/playwright-core/express and the browser binary download —
-#   use this if a camofox-browser REST server is already running (locally or
+#   use this if a chuskybrowser REST server is already running (locally or
 #   remotely) and you only need the stdio adapter.
 git clone https://github.com/jo-inc/camofox-browser && cd camofox-browser/mcp
 npm install   # installs only @modelcontextprotocol/sdk (~24MB, no postinstall)
-npm link      # camofox-browser-mcp now resolves from any directory
+npm link      # chuskybrowser-mcp now resolves from any directory
 ```
 
 Verify the bin resolves from any directory:
 
 ```bash
-which camofox-browser-mcp   # → .../bin/camofox-browser-mcp
+which chuskybrowser-mcp   # → .../bin/chuskybrowser-mcp
 ```
 
 ## 3. Register with your host
 
-All five hosts speak standard MCP, so they all run the same `camofox-browser-mcp` bin. Pick your host's config snippet below.
+All five hosts speak standard MCP, so they all run the same `chuskybrowser-mcp` bin. Pick your host's config snippet below.
 
 ### Claude Code
 
 ```bash
 # CLI (user scope = available in every project)
-claude mcp add camofox-browser -s user -- camofox-browser-mcp
+claude mcp add chuskybrowser -s user -- chuskybrowser-mcp
 ```
 
 Or in `~/.claude.json` (user) / `.mcp.json` (project, checked in):
@@ -75,8 +75,8 @@ Or in `~/.claude.json` (user) / `.mcp.json` (project, checked in):
 ```json
 {
   "mcpServers": {
-    "camofox-browser": {
-      "command": "camofox-browser-mcp"
+    "chuskybrowser": {
+      "command": "chuskybrowser-mcp"
     }
   }
 }
@@ -87,9 +87,9 @@ Or in `~/.claude.json` (user) / `.mcp.json` (project, checked in):
 `~/.codex/config.toml` (user) or `.codex/config.toml` (project, trusted dirs only):
 
 ```toml
-[mcp_servers.camofox-browser]
-command = "camofox-browser-mcp"
-env = { CAMOFOX_BASE_URL = "http://localhost:9377" }
+[mcp_servers.chuskybrowser]
+command = "chuskybrowser-mcp"
+env = { CHUSKY_BASE_URL = "http://localhost:9377" }
 ```
 
 ### Antigravity / agy
@@ -99,8 +99,8 @@ Global `~/.gemini/config/mcp_config.json` or workspace `.agents/mcp_config.json`
 ```json
 {
   "mcpServers": {
-    "camofox-browser": {
-      "command": "camofox-browser-mcp"
+    "chuskybrowser": {
+      "command": "chuskybrowser-mcp"
     }
   }
 }
@@ -113,8 +113,8 @@ Global `~/.cursor/mcp.json` or project `.cursor/mcp.json` (checked in):
 ```json
 {
   "mcpServers": {
-    "camofox-browser": {
-      "command": "camofox-browser-mcp"
+    "chuskybrowser": {
+      "command": "chuskybrowser-mcp"
     }
   }
 }
@@ -130,9 +130,9 @@ Global `~/.cursor/mcp.json` or project `.cursor/mcp.json` (checked in):
 {
   "$schema": "https://opencode.ai/config.json",
   "mcp": {
-    "camofox-browser": {
+    "chuskybrowser": {
       "type": "local",
-      "command": ["camofox-browser-mcp"]
+      "command": ["chuskybrowser-mcp"]
     }
   }
 }
@@ -143,10 +143,10 @@ Global `~/.cursor/mcp.json` or project `.cursor/mcp.json` (checked in):
 If you need cookie import or a non-default REST URL, add env. Example for Claude Code:
 
 ```bash
-claude mcp add camofox-browser -s user \
-  --env CAMOFOX_BASE_URL=http://localhost:9377 \
-  --env CAMOFOX_API_KEY=<key> \
-  -- camofox-browser-mcp
+claude mcp add chuskybrowser -s user \
+  --env CHUSKY_BASE_URL=http://localhost:9377 \
+  --env CHUSKY_API_KEY=<key> \
+  -- chuskybrowser-mcp
 ```
 
 For the other hosts, add the same keys to the `env` / `environment` field of that host's snippet.
@@ -154,39 +154,39 @@ For the other hosts, add the same keys to the `env` / `environment` field of tha
 **From-source fallback** (only if you're inside the checkout and haven't linked the bin):
 
 ```bash
-# Replace `camofox-browser-mcp` with `node /absolute/path/to/mcp/server.mjs`
-claude mcp add camofox-browser -- node /Users/you/src/camofox-browser/mcp/server.mjs
+# Replace `chuskybrowser-mcp` with `node /absolute/path/to/mcp/server.mjs`
+claude mcp add chuskybrowser -- node /Users/you/src/camofox-browser/mcp/server.mjs
 ```
 
-> ⚠️ Always prefer the `camofox-browser-mcp` bin (options A/B/C/D above). The `node ./mcp/server.mjs` form is **path-dependent** — relative paths break outside the checkout.
+> ⚠️ Always prefer the `chuskybrowser-mcp` bin (options A/B/C/D above). The `node ./mcp/server.mjs` form is **path-dependent** — relative paths break outside the checkout.
 
 ## 4. Verify
 
 | Host | How to verify |
 |------|---------------|
-| Claude Code | `/mcp` — `camofox-browser` shows connected |
+| Claude Code | `/mcp` — `chuskybrowser` shows connected |
 | Codex CLI | `codex` then check MCP server list |
 | agy | `/mcp` overlay in the `agy` CLI |
 | Cursor | Settings → MCP — server shows green |
 | opencode | `opencode mcp list` |
 
-You should see 24 tools: the 11 browser tools (`camofox_create_tab`, `camofox_snapshot`, `camofox_click`, `camofox_type`, `camofox_navigate`, `camofox_scroll`, `camofox_screenshot`, `camofox_evaluate`, `camofox_list_tabs`, `camofox_close_tab`, `camofox_import_cookies`), two handoff tools (`camofox_handoff_start`, `camofox_handoff_release`), three payment tools (`camofox_pay_arm`, `camofox_pay_status`, `camofox_pay_disarm`), and eight AgentCard tools (`agentcard_enrol`, `agentcard_cards`, `agentcard_placeholder`, `agentcard_buy`, `agentcard_merchants`, `agentcard_presets_list`, `agentcard_preset_set`, `agentcard_preset_attach`). The user id comes from `CAMOFOX_USER_ID`, never from the model.
+You should see 24 tools: the 11 browser tools (`chusky_create_tab`, `chusky_snapshot`, `chusky_click`, `chusky_type`, `chusky_navigate`, `chusky_scroll`, `chusky_screenshot`, `chusky_evaluate`, `chusky_list_tabs`, `chusky_close_tab`, `chusky_import_cookies`), two handoff tools (`chusky_handoff_start`, `chusky_handoff_release`), three payment tools (`chusky_pay_arm`, `chusky_pay_status`, `chusky_pay_disarm`), and eight AgentCard tools (`agentcard_enrol`, `agentcard_cards`, `agentcard_placeholder`, `agentcard_buy`, `agentcard_merchants`, `agentcard_presets_list`, `agentcard_preset_set`, `agentcard_preset_attach`). The user id comes from `CHUSKY_USER_ID`, never from the model.
 
 ## Tools
 
 | Tool | Purpose |
 |------|---------|
-| `camofox_create_tab` | Open a URL → returns `tabId` |
-| `camofox_snapshot` | Accessibility snapshot + element refs (`e1`, `e2`, ...) + screenshot |
-| `camofox_navigate` | Go to a URL **or** use a search macro (`@google_search`, `@reddit_search`, ...) |
-| `camofox_click` | Click by element ref (`e1`) or CSS selector |
-| `camofox_type` | Type text into a ref/selector, optional `pressEnter` |
-| `camofox_scroll` | Scroll by pixels (unreliable on lazy-load pages — prefer `camofox_evaluate`) |
-| `camofox_screenshot` | Standalone screenshot |
-| `camofox_evaluate` | Run JS in page context — extract data, call page APIs, scroll via `window.scrollTo` |
-| `camofox_list_tabs` | List open tabs in this session |
-| `camofox_close_tab` | Close a tab |
-| `camofox_import_cookies` | Import a Netscape cookie file (needs `CAMOFOX_API_KEY`) |
+| `chusky_create_tab` | Open a URL → returns `tabId` |
+| `chusky_snapshot` | Accessibility snapshot + element refs (`e1`, `e2`, ...) + screenshot |
+| `chusky_navigate` | Go to a URL **or** use a search macro (`@google_search`, `@reddit_search`, ...) |
+| `chusky_click` | Click by element ref (`e1`) or CSS selector |
+| `chusky_type` | Type text into a ref/selector, optional `pressEnter` |
+| `chusky_scroll` | Scroll by pixels (unreliable on lazy-load pages — prefer `chusky_evaluate`) |
+| `chusky_screenshot` | Standalone screenshot |
+| `chusky_evaluate` | Run JS in page context — extract data, call page APIs, scroll via `window.scrollTo` |
+| `chusky_list_tabs` | List open tabs in this session |
+| `chusky_close_tab` | Close a tab |
+| `chusky_import_cookies` | Import a Netscape cookie file (needs `CHUSKY_API_KEY`) |
 
 ## Workflow
 
@@ -204,19 +204,19 @@ Element refs are unambiguous and preferred over CSS selectors — a selector tha
 
 | Var | Default | Purpose |
 |-----|---------|---------|
-| `CAMOFOX_BASE_URL` | `http://localhost:9377` | REST server URL |
-| `CAMOFOX_USER_ID` | `mcp-<random>` | Session isolation (one MCP server = one camofox session) |
-| `CAMOFOX_SESSION_KEY` | `default` | Tab partition within the user |
-| `CAMOFOX_ACCESS_KEY` | _(unset)_ | Global bearer token gating the REST server (superkey). If set, forwarded as `Authorization: Bearer <key>` on **every** tool call automatically — must match the REST server's own `CAMOFOX_ACCESS_KEY`. Without this, a globally-authenticated REST server rejects all tool calls except cookie import. |
-| `CAMOFOX_API_KEY` | _(unset)_ | Self-chosen secret gating cookie import. Optional on localhost; required on remote/production and must match the REST server's `CAMOFOX_API_KEY`. Only affects `camofox_import_cookies`. |
+| `CHUSKY_BASE_URL` | `http://localhost:9377` | REST server URL |
+| `CHUSKY_USER_ID` | `mcp-<random>` | Session isolation (one MCP server = one chusky session) |
+| `CHUSKY_SESSION_KEY` | `default` | Tab partition within the user |
+| `CHUSKY_ACCESS_KEY` | _(unset)_ | Global bearer token gating the REST server (superkey). If set, forwarded as `Authorization: Bearer <key>` on **every** tool call automatically — must match the REST server's own `CHUSKY_ACCESS_KEY`. Without this, a globally-authenticated REST server rejects all tool calls except cookie import. |
+| `CHUSKY_API_KEY` | _(unset)_ | Self-chosen secret gating cookie import. Optional on localhost; required on remote/production and must match the REST server's `CHUSKY_API_KEY`. Only affects `chusky_import_cookies`. |
 
 ## Troubleshooting
 
 - **`503 session_expired` / `tab create timed out`** — the REST server's browser session died (often after a prior failed call destabilized it). Restart `npm start`.
-- **`camofox_scroll` returns `{ok:true}` but the page doesn't move** — expected on lazy-load / virtual-scroll pages; the server's `mouse.wheel` no-ops there. Use `camofox_evaluate` with `window.scrollTo` / `scrollBy`.
+- **`chusky_scroll` returns `{ok:true}` but the page doesn't move** — expected on lazy-load / virtual-scroll pages; the server's `mouse.wheel` no-ops there. Use `chusky_evaluate` with `window.scrollTo` / `scrollBy`.
 - **`422 strict mode violation ... resolved to N elements`** on `click` — CSS selector matched multiple elements. Re-snapshot and click by element ref.
-- **`403 Forbidden` on `camofox_import_cookies`** — key mismatch between REST server and MCP server, or hitting a remote server without `CAMOFOX_API_KEY`.
-- **`401`/`403` on every tool call, not just cookie import** — the REST server has `CAMOFOX_ACCESS_KEY` set. Set the same `CAMOFOX_ACCESS_KEY` in the MCP server's env (see table above) — it's forwarded automatically as `Authorization: Bearer` once set.
+- **`403 Forbidden` on `chusky_import_cookies`** — key mismatch between REST server and MCP server, or hitting a remote server without `CHUSKY_API_KEY`.
+- **`401`/`403` on every tool call, not just cookie import** — the REST server has `CHUSKY_ACCESS_KEY` set. Set the same `CHUSKY_ACCESS_KEY` in the MCP server's env (see table above) — it's forwarded automatically as `Authorization: Bearer` once set.
 
 ## Testing (developer)
 
@@ -229,12 +229,12 @@ Two layers, covering different things:
 npm run test:mcp
 
 # 2. Mock-HTTP contract tests — verifies the actual REST traffic each tool
-#    produces: routes, methods, request bodies, CAMOFOX_ACCESS_KEY/CAMOFOX_API_KEY
+#    produces: routes, methods, request bodies, CHUSKY_ACCESS_KEY/CHUSKY_API_KEY
 #    auth headers, cookie parsing (Netscape file → `{ cookies }` body, never a
 #    path), screenshot decoding, and error handling. Mocked REST server — no
-#    live camofox-browser process needed. This is what makes the "OpenClaw and
+#    live chuskybrowser process needed. This is what makes the "OpenClaw and
 #    MCP send identical requests" claim verifiable, not just asserted.
 NODE_OPTIONS='--experimental-vm-modules' npx jest tests/unit/mcp-contracts.test.js
 ```
 
-The packed-tarball check installs the generated `@askjo/camofox-browser-mcp` tarball in an empty directory before its handshake. It catches imports that reach outside the standalone package.
+The packed-tarball check installs the generated `chuskybrowser-mcp` tarball in an empty directory before its handshake. It catches imports that reach outside the standalone package.

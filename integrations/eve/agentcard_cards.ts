@@ -1,7 +1,7 @@
 //agent/tools/agentcard_cards.ts
 import { defineTool } from "eve/tools";
 import { z } from "zod";
-import { camofoxRequest, getCamofoxUserId, readCamofoxJson } from "../lib/camofox.js";
+import { chuskyRequest, getChuskyUserId, readChuskyJson } from "../lib/chusky.js";
 
 export default defineTool({
   description:
@@ -9,14 +9,14 @@ export default defineTool({
   inputSchema: z.object({}),
   outputSchema: z.object({}).passthrough(),
   async execute(_input, ctx) {
-    const userId = getCamofoxUserId(ctx.session.auth.current);
+    const userId = getChuskyUserId(ctx.session.auth.current);
     const query = new URLSearchParams({ userId });
-    const response = await camofoxRequest(
+    const response = await chuskyRequest(
       `/agentcard/vault/cards?${query}`,
       userId,
       ctx.abortSignal,
       "agentcard cards",
     );
-    return readCamofoxJson(response, "agentcard cards");
+    return readChuskyJson(response, "agentcard cards");
   },
 });

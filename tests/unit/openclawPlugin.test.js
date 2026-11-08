@@ -28,11 +28,11 @@ describe('OpenClaw plugin registration', () => {
       },
     });
 
-    expect(gatewayMethods.get('camofox.health').options).toEqual({ scope: 'operator.admin' });
-    expect(gatewayMethods.get('camofox.status').options).toEqual({ scope: 'operator.admin' });
+    expect(gatewayMethods.get('chusky.health').options).toEqual({ scope: 'operator.admin' });
+    expect(gatewayMethods.get('chusky.status').options).toEqual({ scope: 'operator.admin' });
 
     const respond = jest.fn();
-    await gatewayMethods.get('camofox.health').handler({ params: {}, respond });
+    await gatewayMethods.get('chusky.health').handler({ params: {}, respond });
 
     expect(fetchMock).toHaveBeenCalledWith('http://localhost:9377/health', expect.any(Object));
     expect(respond).toHaveBeenCalledWith(true, {

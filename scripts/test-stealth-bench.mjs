@@ -1,5 +1,5 @@
 /**
- * Stealth benchmark against a running Camofox server.
+ * Stealth benchmark against a running Chusky server.
  *
  * Usage:
  *   node scripts/test-stealth-bench.mjs                     (default targets, 3 runs each)

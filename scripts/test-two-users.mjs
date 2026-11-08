@@ -1,5 +1,5 @@
 /**
- * Two-user isolation test against a running Camofox server.
+ * Two-user isolation test against a running Chusky server.
  *
  * Usage: node scripts/test-two-users.mjs   (reads .env)
  *

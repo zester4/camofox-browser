@@ -64,7 +64,7 @@ export function buildWatcherEnv({ resolution, vncPassword, viewOnly, vncPort, no
  */
 export function startWatcher({ resolution, vncPassword, viewOnly, vncPort, novncPort, log, events }) {
   const watcherPath = path.join(__dirname, 'vnc-watcher.sh');
-  const statusDir = fs.mkdtempSync(path.join(os.tmpdir(), 'camofox-vnc-'));
+  const statusDir = fs.mkdtempSync(path.join(os.tmpdir(), 'chusky-vnc-'));
   const statusFile = path.join(statusDir, 'status');
   const watcher = spawn('sh', [watcherPath], {
     env: buildWatcherEnv({ resolution, vncPassword, viewOnly, vncPort, novncPort, statusFile }),

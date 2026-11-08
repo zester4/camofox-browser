@@ -1,6 +1,6 @@
 # VNC Plugin
 
-> Originally contributed by [@leoneparise](https://github.com/leoneparise) in [PR #65](https://github.com/jo-inc/camofox-browser/pull/65). Reworked as a plugin for the camofox extension system.
+> Originally contributed by [@leoneparise](https://github.com/leoneparise) in [PR #65](https://github.com/jo-inc/camofox-browser/pull/65). Reworked as a plugin for the chusky extension system.
 
 Interactive browser access via VNC. Log into sites visually, solve CAPTCHAs, approve OAuth prompts — then export the authenticated storage state for reuse by your agent.
 
@@ -25,7 +25,7 @@ The plugin registers the `virtualDisplay` capability for its own `plugins.vnc` s
 ```bash
 docker run -p 9377:9377 -p 127.0.0.1:6080:6080 \
   -e ENABLE_VNC=1 -e VNC_BIND=0.0.0.0 \
-  camofox-browser
+  chuskybrowser
 
 # Open http://localhost:6080/vnc.html in your browser
 ```
@@ -50,7 +50,7 @@ docker run -p 9377:9377 -p 127.0.0.1:6080:6080 \
 
 1. **Start with VNC enabled:**
    ```bash
-   docker run -p 9377:9377 -p 127.0.0.1:6080:6080 -e ENABLE_VNC=1 -e VNC_BIND=0.0.0.0 camofox-browser
+   docker run -p 9377:9377 -p 127.0.0.1:6080:6080 -e ENABLE_VNC=1 -e VNC_BIND=0.0.0.0 chuskybrowser
    ```
 
 2. **Create a session and navigate to the login page:**
@@ -65,7 +65,7 @@ docker run -p 9377:9377 -p 127.0.0.1:6080:6080 \
 4. **Export the authenticated state:**
    ```bash
    curl http://localhost:9377/sessions/my-agent/storage_state \
-     -H 'Authorization: Bearer YOUR_CAMOFOX_API_KEY' \
+     -H 'Authorization: Bearer YOUR_CHUSKY_API_KEY' \
      -o storage_state.json
    ```
 
@@ -104,7 +104,7 @@ Report whether the VNC watcher and its x11vnc backend are running. This endpoint
 
 Export the full Playwright storage state (cookies + localStorage origins) for a user's active browser context.
 
-**Auth:** Same as cookie import — requires `CAMOFOX_API_KEY` Bearer token, or loopback access in non-production.
+**Auth:** Same as cookie import — requires `CHUSKY_API_KEY` Bearer token, or loopback access in non-production.
 
 **Response:**
 ```json

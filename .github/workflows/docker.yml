@@ -47,8 +47,8 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ghcr.io/jo-inc/camofox-browser:${{ env.VERSION }}
-            ghcr.io/jo-inc/camofox-browser:latest
+            ghcr.io/jo-inc/chuskybrowser:${{ env.VERSION }}
+            ghcr.io/jo-inc/chuskybrowser:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

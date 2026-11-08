@@ -1,4 +1,4 @@
-# camofox-browser Agent Guide
+# chuskybrowser Agent Guide
 
 Headless browser automation server for AI agents. Run locally or deploy to any cloud provider.
 
@@ -137,8 +137,8 @@ npx jest plugins/youtube          # Single plugin's tests
 ## Docker
 
 ```bash
-docker build -t camofox-browser .
-docker run -p 9377:9377 camofox-browser
+docker build -t chuskybrowser .
+docker run -p 9377:9377 chuskybrowser
 ```
 
 ## Key Files
@@ -155,8 +155,8 @@ docker run -p 9377:9377 camofox-browser
 - `lib/macros.js` - Search macro URL expansion
 - `lib/plugins.js` - Plugin loader and event bus
 - `lib/auth.js` - Shared auth middleware (API key / loopback)
-- `camofox.config.json` - Plugin configuration (which plugins to load)
-- `plugins/` - Plugin directory (loaded per camofox.config.json)
+- `chusky.config.json` - Plugin configuration (which plugins to load)
+- `plugins/` - Plugin directory (loaded per chusky.config.json)
 - `plugins/youtube/` - Default plugin: YouTube transcript extraction
 - `scripts/install-plugin-deps.sh` - Installs plugin deps (apt.txt + post-install.sh)
 - `plugins/vnc/index.js` - VNC plugin routes (no `child_process` -- spawning isolated in `vnc-launcher.js`)
@@ -242,7 +242,7 @@ app.post('/tabs/:tabId/click', async (req, res) => {
 - **Public domain list** (~120 entries) determines which domains are shown verbatim vs HMAC-hashed
 - **Tests**: `tests/unit/crashRelay.test.js` (telemetry client), `tests/unit/crashRelayWorker.test.js` (worker contract), `tests/unit/noSecrets.test.js` (asserts no key material in shipped files)
 - Self-hosted endpoint: see README "Self-hosted telemetry endpoint" section
-- Disable with `CAMOFOX_CRASH_REPORT_ENABLED=false`
+- Disable with `CHUSKY_CRASH_REPORT_ENABLED=false`
 
 ## Code Separation Conventions
 
@@ -257,7 +257,7 @@ When adding features that need env vars or subprocesses, put that code in a `lib
 
 ## Plugin System
 
-Plugins extend camofox-browser with new endpoints, background processes, and lifecycle hooks. The server auto-loads all plugins from `plugins/<name>/index.js` on startup.
+Plugins extend chuskybrowser with new endpoints, background processes, and lifecycle hooks. The server auto-loads all plugins from `plugins/<name>/index.js` on startup.
 
 ### Creating a Plugin
 
@@ -431,14 +431,14 @@ chmod +x /usr/local/bin/yt-dlp
 
 Both are run by `scripts/install-plugin-deps.sh` during Docker build.
 
-### Configuration (`camofox.config.json`)
+### Configuration (`chusky.config.json`)
 
-`camofox.config.json` controls which plugins are loaded at runtime and during Docker build:
+`chusky.config.json` controls which plugins are loaded at runtime and during Docker build:
 
 ```json
 {
-  "id": "camofox-browser",
-  "name": "Camofox Browser",
+  "id": "chuskybrowser",
+  "name": "Chusky Browser",
   "version": "1.5.2",
   "plugins": ["youtube"]
 }
@@ -446,7 +446,7 @@ Both are run by `scripts/install-plugin-deps.sh` during Docker build.
 
 - **`plugins`** -- array of plugin directory names to load. Only these are loaded at startup and have deps installed during build.
 - If the file is missing or has no `plugins` key, **all** plugins in `plugins/` are loaded (backward-compatible).
-- This is camofox's own config. `openclaw.plugin.json` is separate -- it tells the OpenClaw Gateway how to configure camofox as an external service.
+- This is chusky's own config. `openclaw.plugin.json` is separate -- it tells the OpenClaw Gateway how to configure chusky as an external service.
 
 ### Installing Plugins
 
@@ -467,7 +467,7 @@ node scripts/plugin.js list
 node scripts/plugin.js remove my-plugin
 ```
 
-The installer copies the plugin into `plugins/`, adds it to `camofox.config.json`, and runs `npm install` for any npm dependencies. System deps (`apt.txt`, `post-install.sh`) are flagged but must be installed manually or via Docker rebuild.
+The installer copies the plugin into `plugins/`, adds it to `chusky.config.json`, and runs `npm install` for any npm dependencies. System deps (`apt.txt`, `post-install.sh`) are flagged but must be installed manually or via Docker rebuild.
 
 Plugin sources can be:
 - **Git repos** where the root has `index.js` with `register()` (installed as one plugin)
@@ -479,15 +479,15 @@ Plugin sources can be:
 Three plugins ship by default:
 
 - **youtube** -- YouTube transcript extraction (enabled by default)
-- **persistence** -- Per-user session state persistence to `~/.camofox/profiles/` (enabled by default)
+- **persistence** -- Per-user session state persistence to `~/.chusky/profiles/` (enabled by default)
 - **vnc** -- Interactive browser login via noVNC (disabled by default, requires `ENABLE_VNC=1`)
 
-The `youtube` plugin ships as a default plugin -- it's listed in `camofox.config.json` and included in the base Docker image with its deps pre-installed. The base image runs `scripts/install-plugin-deps.sh` which reads the config and installs `apt.txt` packages + `post-install.sh` hooks for listed plugins.
+The `youtube` plugin ships as a default plugin -- it's listed in `chusky.config.json` and included in the base Docker image with its deps pre-installed. The base image runs `scripts/install-plugin-deps.sh` which reads the config and installs `apt.txt` packages + `post-install.sh` hooks for listed plugins.
 
 The `with-plugins` Dockerfile stage is for rebuilding after adding third-party plugins:
 
 ```bash
-docker build --target with-plugins -t camofox-browser .
+docker build --target with-plugins -t chuskybrowser .
 ```
 
 The `with-plugins` stage re-runs `install-plugin-deps.sh` to pick up any new plugins added to `plugins/`.
@@ -505,7 +505,7 @@ Plugins create Prometheus metrics via `ctx.createMetric()`. Returns a no-op stub
 ```js
 // In register(app, ctx):
 const transcriptsTotal = await ctx.createMetric('counter', {
-  name: 'camofox_youtube_transcripts_total',
+  name: 'chusky_youtube_transcripts_total',
   help: 'YouTube transcripts extracted',
   labelNames: ['method'],
 });

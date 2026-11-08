@@ -19,7 +19,7 @@ export async function register(app, ctx, pluginConfig = {}) {
   // Detect yt-dlp binary at load time
   await detectYtDlp(log);
 
-  // Auth is on by default; set { "auth": false } in camofox.config.json to disable
+  // Auth is on by default; set { "auth": false } in chusky.config.json to disable
   // Auth off by default -- matches pre-plugin behavior. Set { "auth": true } to require auth.
   const middleware = pluginConfig.auth === true ? ctx.auth() : (_req, _res, next) => next();
 

@@ -4,7 +4,7 @@
  *
  *   node scripts/test-viewer-browser.mjs
  *
- * Needs the server running (npm start) with CAMOFOX_ACCESS_KEY in .env, and the Camoufox binary
+ * Needs the server running (npm start) with CHUSKY_ACCESS_KEY in .env, and the Camoufox binary
  * (npm run fetch-bin). The viewer is opened inside a host page, the way the app embeds it, and the
  * host applies the resize message the viewer sends. Checks:
  *   - the bar shows Done while the person holds the tab
@@ -26,8 +26,8 @@ import { launchOptions } from 'camoufox-js';
 const envPath = resolve(process.cwd(), '.env');
 if (existsSync(envPath)) loadEnvFile(envPath);
 
-const BASE = (process.env.CAMOFOX_BASE_URL || 'http://localhost:9377').trim().replace(/\/+$/, '');
-const ACCESS_KEY = (process.env.CAMOFOX_ACCESS_KEY || process.env.CAMOFOX_API_KEY || '').trim();
+const BASE = (process.env.CHUSKY_BASE_URL || 'http://localhost:9377').trim().replace(/\/+$/, '');
+const ACCESS_KEY = (process.env.CHUSKY_ACCESS_KEY || process.env.CHUSKY_API_KEY || '').trim();
 const userId = `viewer-ui-${randomUUID()}`;
 const sessionKey = `viewer-ui-${randomUUID()}`;
 const MINIMIZED_HEIGHT = 36;
@@ -96,7 +96,7 @@ const HOST_PAGE = `<!doctype html><meta charset="utf-8"><title>Host</title>
   document.getElementById('viewer').src = new URLSearchParams(location.search).get('src');
   window.addEventListener('message', function (e) {
     var d = e.data;
-    if (!d || d.source !== 'camofox-live-viewer' || d.type !== 'resize') return;
+    if (!d || d.source !== 'chusky-live-viewer' || d.type !== 'resize') return;
     navigator.sendBeacon('/resize?minimized=' + (d.minimized ? 1 : 0) + '&expanded=' + (d.expanded ? 1 : 0));
     document.getElementById('viewer').style.height =
       d.minimized ? '${MINIMIZED_HEIGHT}px' : d.expanded ? '100vh' : '${NORMAL_HEIGHT}px';
@@ -114,7 +114,7 @@ async function launchFirefox() {
 async function main() {
   check('server answers', (await call('/live-viewer/view', { key: '' })).status < 500);
   if (!ACCESS_KEY) {
-    check('CAMOFOX_ACCESS_KEY is set in .env', false, 'the viewer needs it to issue links');
+    check('CHUSKY_ACCESS_KEY is set in .env', false, 'the viewer needs it to issue links');
     return;
   }
 

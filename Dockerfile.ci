@@ -77,7 +77,7 @@ RUN npm ci --omit=dev \
     && rm -rf /var/lib/apt/lists/*
 
 COPY server.js ./
-COPY camofox.config.json ./
+COPY chusky.config.json ./
 COPY lib/ ./lib/
 COPY agentcard/ ./agentcard/
 # lib/cookies.js re-exports mcp/lib/cookies.mjs for persistence support.
@@ -97,7 +97,7 @@ RUN case "${TARGETARCH}" in \
     sh scripts/install-plugin-deps.sh
 
 ENV NODE_ENV=production
-ENV CAMOFOX_PORT=9377
+ENV CHUSKY_PORT=9377
 
 EXPOSE 9377
 

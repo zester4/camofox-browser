@@ -18,7 +18,7 @@ async function startServerWithApiKey(apiKey) {
   serverProcess = launchServer({
     pluginDir,
     port,
-    env: { ...cfg.serverEnv, CAMOFOX_API_KEY: apiKey, DEBUG_RESPONSES: 'false' },
+    env: { ...cfg.serverEnv, CHUSKY_API_KEY: apiKey, DEBUG_RESPONSES: 'false' },
     log: { info: () => {}, error: (msg) => console.error(msg) },
   });
 
@@ -41,7 +41,7 @@ async function startServerWithoutApiKey() {
   const pluginDir = path.join(__dirname, '../..');
 
   const env = { ...cfg.serverEnv, DEBUG_RESPONSES: 'false' };
-  delete env.CAMOFOX_API_KEY;
+  delete env.CHUSKY_API_KEY;
 
   serverProcess = launchServer({
     pluginDir,
@@ -302,7 +302,7 @@ describe('Cookie endpoint - without API key', () => {
     await stopServer();
   }, 30000);
 
-  test('allows unauthenticated loopback requests when CAMOFOX_API_KEY is not set', async () => {
+  test('allows unauthenticated loopback requests when CHUSKY_API_KEY is not set', async () => {
     const cookies = [
       { name: 'a', value: '1', domain: '.example.com', path: '/' },
     ];

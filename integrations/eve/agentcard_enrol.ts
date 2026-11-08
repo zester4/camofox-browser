@@ -2,11 +2,11 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 import {
-  camofoxPostBody,
-  camofoxRequest,
-  getCamofoxUserId,
-  readCamofoxJson,
-} from "../lib/camofox.js";
+  chuskyPostBody,
+  chuskyRequest,
+  getChuskyUserId,
+  readChuskyJson,
+} from "../lib/chusky.js";
 
 export default defineTool({
   description:
@@ -16,14 +16,14 @@ export default defineTool({
   }),
   outputSchema: z.object({}).passthrough(),
   async execute({ addAnother }, ctx) {
-    const userId = getCamofoxUserId(ctx.session.auth.current);
-    const response = await camofoxRequest(
+    const userId = getChuskyUserId(ctx.session.auth.current);
+    const response = await chuskyRequest(
       `/agentcard/vault/enrol`,
       userId,
       ctx.abortSignal,
       "agentcard enrol",
-      { method: "POST", body: camofoxPostBody(userId, { addAnother: addAnother === true }) },
+      { method: "POST", body: chuskyPostBody(userId, { addAnother: addAnother === true }) },
     );
-    return readCamofoxJson(response, "agentcard enrol");
+    return readChuskyJson(response, "agentcard enrol");
   },
 });

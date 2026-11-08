@@ -1,5 +1,5 @@
 /**
- * Live site checks against a running Camofox server.
+ * Live site checks against a running Chusky server.
  *
  * Usage: node scripts/test-live-sites.mjs            (all sites)
  *        node scripts/test-live-sites.mjs hn maps     (only the named sites)

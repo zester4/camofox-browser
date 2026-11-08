@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "camofox-browser",
+    "title": "chuskybrowser",
     "version": "1.6.0",
     "description": "Anti-detection browser automation server for AI agents. Accessibility snapshots, element refs, session isolation, cookie import, proxy rotation, and structured logs.",
     "license": {
@@ -59,7 +59,7 @@
       "BearerAuth": {
         "type": "http",
         "scheme": "bearer",
-        "description": "Bearer token matching CAMOFOX_API_KEY."
+        "description": "Bearer token matching CHUSKY_API_KEY."
       }
     },
     "schemas": {

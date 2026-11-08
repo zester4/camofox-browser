@@ -1,4 +1,4 @@
-// Shared helpers for the Camofox skill scripts. No dependencies.
+// Shared helpers for the Chusky skill scripts. No dependencies.
 import fs from 'node:fs';
 import path from 'node:path';
 

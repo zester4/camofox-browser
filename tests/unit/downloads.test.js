@@ -65,7 +65,7 @@ describe('lib/downloads', () => {
 
   describe('clearTabDownloads', () => {
     test('clears array and deletes temp files', async () => {
-      const tmpFile = path.join(os.tmpdir(), `camofox-test-${Date.now()}.tmp`);
+      const tmpFile = path.join(os.tmpdir(), `chusky-test-${Date.now()}.tmp`);
       await fs.writeFile(tmpFile, 'test');
 
       const tabState = {
@@ -191,7 +191,7 @@ describe('lib/downloads', () => {
     });
 
     test('includes base64 data when includeData is true', async () => {
-      const tmpFile = path.join(os.tmpdir(), `camofox-test-dl-${Date.now()}.tmp`);
+      const tmpFile = path.join(os.tmpdir(), `chusky-test-dl-${Date.now()}.tmp`);
       await fs.writeFile(tmpFile, 'hello world');
 
       const tabState = {
@@ -241,7 +241,7 @@ describe('lib/downloads', () => {
           mimeType: 'application/octet-stream',
           bytes: 10,
           createdAt: '2026-01-01T00:00:00.000Z',
-          filePath: '/tmp/camofox-definitely-does-not-exist-xyz',
+          filePath: '/tmp/chusky-definitely-does-not-exist-xyz',
           failure: null,
         }],
       };

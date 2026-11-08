@@ -1,9 +1,9 @@
 /**
- * Pay on any site through a Playwright-style page, including Camofox.
+ * Pay on any site through a Playwright-style page, including Chusky.
  *
  * Why this exists: the AgentCard SDK's browser path (attachToPlaywright) is
  * documented for Chromium. It drives Chromium over CDP, and on Firefox it refuses
- * a classic-mode payment step. Camofox is Firefox-based, so we do the documented
+ * a classic-mode payment step. Chusky is Firefox-based, so we do the documented
  * "your own interception" path instead: pause the processor's card request with
  * the page's own request routing, ask AgentCard for an authorization, give the
  * approval link to the user untouched, and replay AgentCard's processor response

@@ -1,7 +1,7 @@
 //agent/tools/agentcard_merchants.ts
 import { defineTool } from "eve/tools";
 import { z } from "zod";
-import { camofoxRequest, getCamofoxUserId, readCamofoxJson } from "../lib/camofox.js";
+import { chuskyRequest, getChuskyUserId, readChuskyJson } from "../lib/chusky.js";
 
 export default defineTool({
   description:
@@ -14,18 +14,18 @@ export default defineTool({
   }),
   outputSchema: z.object({}).passthrough(),
   async execute({ kind, q, limit, cursor }, ctx) {
-    const userId = getCamofoxUserId(ctx.session.auth.current);
+    const userId = getChuskyUserId(ctx.session.auth.current);
     const query = new URLSearchParams({ userId });
     if (kind) query.set("kind", kind);
     if (q) query.set("q", q);
     if (limit !== undefined) query.set("limit", String(limit));
     if (cursor) query.set("cursor", cursor);
-    const response = await camofoxRequest(
+    const response = await chuskyRequest(
       `/agentcard/merchants?${query}`,
       userId,
       ctx.abortSignal,
       "agentcard merchants",
     );
-    return readCamofoxJson(response, "agentcard merchants");
+    return readChuskyJson(response, "agentcard merchants");
   },
 });

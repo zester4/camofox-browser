@@ -1,7 +1,7 @@
 /**
  * Checks the page-side extraction (collectPageData + buildExtraction) in a real
  * browser, against a fixture page with known contents. Needs Chromium through
- * Playwright, but no Camofox server and no access key.
+ * Playwright, but no Chusky server and no access key.
  *
  * Usage: node scripts/test-extract-page.mjs
  */

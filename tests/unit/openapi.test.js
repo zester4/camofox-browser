@@ -47,7 +47,7 @@ describe('OpenAPI spec', () => {
   test('is valid OpenAPI 3.0.x shape', () => {
     expect(spec.openapi).toMatch(/^3\.0\.\d+$/);
     expect(spec.info).toBeDefined();
-    expect(spec.info.title).toBe('camofox-browser');
+    expect(spec.info.title).toBe('chuskybrowser');
     expect(spec.paths).toBeDefined();
     expect(typeof spec.paths).toBe('object');
     expect(spec.components).toBeDefined();

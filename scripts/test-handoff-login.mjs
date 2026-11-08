@@ -1,11 +1,11 @@
 /**
- * Login handoff, end to end, against a running Camofox server.
+ * Login handoff, end to end, against a running Chusky server.
  *
  * The agent reaches a login page and hands the tab to the person. The person signs in through the
  * live viewer (clicks and typing only). They press Done. The agent then continues in the same tab,
  * still signed in, and can act again.
  *
- * Usage (reads CAMOFOX_BASE_URL and CAMOFOX_ACCESS_KEY from the environment or .env):
+ * Usage (reads CHUSKY_BASE_URL and CHUSKY_ACCESS_KEY from the environment or .env):
  *   node scripts/test-handoff-login.mjs
  *
  * The test starts its own login site on 127.0.0.1, so the server must be able to reach localhost.
@@ -30,11 +30,11 @@ import { loadEnvFile } from 'node:process';
 const envPath = resolve(process.cwd(), '.env');
 if (existsSync(envPath)) loadEnvFile(envPath);
 
-const BASE = (process.env.CAMOFOX_BASE_URL || '').trim().replace(/\/+$/, '');
-const ACCESS_KEY = (process.env.CAMOFOX_ACCESS_KEY || process.env.CAMOFOX_API_KEY || '').trim();
+const BASE = (process.env.CHUSKY_BASE_URL || '').trim().replace(/\/+$/, '');
+const ACCESS_KEY = (process.env.CHUSKY_ACCESS_KEY || process.env.CHUSKY_API_KEY || '').trim();
 const LOGIN_HOST = (process.env.LOGIN_SITE_HOST || '127.0.0.1').trim();
-if (!BASE) throw new Error('Missing CAMOFOX_BASE_URL (set it in .env or the environment).');
-if (!ACCESS_KEY) throw new Error('Missing CAMOFOX_ACCESS_KEY (set it in .env or the environment).');
+if (!BASE) throw new Error('Missing CHUSKY_BASE_URL (set it in .env or the environment).');
+if (!ACCESS_KEY) throw new Error('Missing CHUSKY_ACCESS_KEY (set it in .env or the environment).');
 
 const userId = `login-test-${randomUUID()}`;
 const sessionKey = `login-${randomUUID()}`;

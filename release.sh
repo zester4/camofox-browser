@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Release script for @askjo/camofox-browser
+# Release script for chuskybrowser
 # Usage: ./release.sh [patch|minor|major]
 # Defaults to patch if no argument given.
 #
@@ -80,6 +80,6 @@ git push origin master --follow-tags
 
 echo ""
 echo "✅ Release v${NEW_VERSION} triggered"
-echo "   CI will publish @askjo/camofox-browser@${NEW_VERSION} with provenance"
+echo "   CI will publish chuskybrowser@${NEW_VERSION} with provenance"
 echo "   Watch: https://github.com/jo-inc/camofox-browser/actions"
-echo "   Package: https://www.npmjs.com/package/@askjo/camofox-browser"
+echo "   Package: https://www.npmjs.com/package/chuskybrowser"

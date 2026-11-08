@@ -7,7 +7,7 @@ import { execFileSync } from 'node:child_process';
 const hook = new URL('./post-install.sh', import.meta.url);
 
 function makeHarness() {
-  const dir = mkdtempSync(join(tmpdir(), 'camofox-ytdlp-'));
+  const dir = mkdtempSync(join(tmpdir(), 'chusky-ytdlp-'));
   const bin = join(dir, 'bin');
   const fixture = join(dir, 'fixture');
   const calls = join(dir, 'curl-calls');

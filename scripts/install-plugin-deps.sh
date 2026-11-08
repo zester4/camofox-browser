@@ -1,14 +1,14 @@
 #!/bin/sh
-# Install system packages declared by plugins listed in camofox.config.json.
+# Install system packages declared by plugins listed in chusky.config.json.
 # Each plugin can have an apt.txt (one package per line) and a post-install.sh.
 # If no config file or no plugins key, installs deps for all plugins in plugins/.
 
 set -e
 
-CONFIG="/app/camofox.config.json"
+CONFIG="/app/chusky.config.json"
 PLUGINS_DIR="/app/plugins"
 
-# Read plugin list from camofox.config.json, or fall back to all plugin dirs
+# Read plugin list from chusky.config.json, or fall back to all plugin dirs
 if [ -f "$CONFIG" ] && command -v node >/dev/null 2>&1; then
   PLUGIN_LIST=$(node -e "
     const c = JSON.parse(require('fs').readFileSync('$CONFIG','utf-8'));

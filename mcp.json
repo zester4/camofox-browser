@@ -1,12 +1,12 @@
 {
   "mcpServers": {
-    "camofox-browser": {
+    "chuskybrowser": {
       "command": "npx",
-      "args": ["-y", "@askjo/camofox-browser-mcp"],
+      "args": ["-y", "chuskybrowser-mcp"],
       "env": {
-        "CAMOFOX_BASE_URL": "${env:CAMOFOX_BASE_URL}",
-        "CAMOFOX_ACCESS_KEY": "${env:CAMOFOX_ACCESS_KEY}",
-        "CAMOFOX_USER_ID": "${env:CAMOFOX_USER_ID}"
+        "CHUSKY_BASE_URL": "${env:CHUSKY_BASE_URL}",
+        "CHUSKY_ACCESS_KEY": "${env:CHUSKY_ACCESS_KEY}",
+        "CHUSKY_USER_ID": "${env:CHUSKY_USER_ID}"
       }
     }
   }

@@ -1,5 +1,5 @@
 /**
- * Live check of POST /tabs/{tabId}/extract against a running Camofox server.
+ * Live check of POST /tabs/{tabId}/extract against a running Chusky server.
  *
  * Usage: node scripts/test-extract-live.mjs   (reads .env)
  *

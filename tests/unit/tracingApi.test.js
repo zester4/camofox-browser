@@ -30,7 +30,7 @@ import {
 import { requireAuth } from '../../lib/auth.js';
 
 function makeTempBase() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'camofox-trace-api-'));
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'chusky-trace-api-'));
 }
 
 function normalizeUserId(id) {

@@ -14,7 +14,7 @@ describe('persistence plugin', () => {
   let tmpDir, events, ctx, mockApp;
 
   beforeEach(async () => {
-    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'camofox-persist-plugin-'));
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'chusky-persist-plugin-'));
     events = createPluginEvents();
     mockApp = { delete: jest.fn() };
     ctx = {
@@ -48,10 +48,10 @@ describe('persistence plugin', () => {
     expect(ctx.log).toHaveBeenCalledWith('warn', expect.stringContaining('no profileDir'));
   });
 
-  test('stays disabled without CAMOFOX_STORAGE_KEY, and nothing is written', async () => {
+  test('stays disabled without CHUSKY_STORAGE_KEY, and nothing is written', async () => {
     ctx.config.storageKey = '';
     await register(mockApp, ctx, { profileDir: tmpDir });
-    expect(ctx.log).toHaveBeenCalledWith('warn', expect.stringContaining('CAMOFOX_STORAGE_KEY is not set'));
+    expect(ctx.log).toHaveBeenCalledWith('warn', expect.stringContaining('CHUSKY_STORAGE_KEY is not set'));
 
     const mockContext = { storageState: jest.fn(async () => ({ cookies: [], origins: [] })) };
     await events.emitAsync('session:created', { userId: 'user-nokey', context: mockContext });
@@ -62,7 +62,7 @@ describe('persistence plugin', () => {
   test('a malformed storage key disables the plugin and logs an error', async () => {
     ctx.config.storageKey = Buffer.from('too short').toString('base64');
     await register(mockApp, ctx, { profileDir: tmpDir });
-    expect(ctx.log).toHaveBeenCalledWith('error', expect.stringContaining('invalid CAMOFOX_STORAGE_KEY'), expect.any(Object));
+    expect(ctx.log).toHaveBeenCalledWith('error', expect.stringContaining('invalid CHUSKY_STORAGE_KEY'), expect.any(Object));
   });
 
   test('restores persisted state on session:creating as an object, not a file path', async () => {
@@ -225,10 +225,10 @@ describe('persistence plugin', () => {
     });
   });
 
-  test('env var CAMOFOX_PROFILE_DIR overrides pluginConfig', async () => {
+  test('env var CHUSKY_PROFILE_DIR overrides pluginConfig', async () => {
     const envDir = path.join(tmpDir, 'env-override');
-    const orig = process.env.CAMOFOX_PROFILE_DIR;
-    process.env.CAMOFOX_PROFILE_DIR = envDir;
+    const orig = process.env.CHUSKY_PROFILE_DIR;
+    process.env.CHUSKY_PROFILE_DIR = envDir;
     try {
       await register(mockApp, ctx, { profileDir: '/should/not/use' });
       expect(ctx.log).toHaveBeenCalledWith(
@@ -237,8 +237,8 @@ describe('persistence plugin', () => {
         expect.objectContaining({ profileDir: envDir })
       );
     } finally {
-      if (orig === undefined) delete process.env.CAMOFOX_PROFILE_DIR;
-      else process.env.CAMOFOX_PROFILE_DIR = orig;
+      if (orig === undefined) delete process.env.CHUSKY_PROFILE_DIR;
+      else process.env.CHUSKY_PROFILE_DIR = orig;
     }
   });
 

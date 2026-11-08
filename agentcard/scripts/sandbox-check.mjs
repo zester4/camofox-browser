@@ -184,7 +184,7 @@ async function main() {
       const endpoint = await api.createWebhookEndpoint({
         url: registerUrl,
         enabledEvents: ['vault.session_linked', 'vault.card_stored', 'checkout_authorization.*'],
-        description: 'Camofox sandbox check',
+        description: 'Chusky sandbox check',
       });
       check('webhook endpoint registered', endpoint.status === 'active' && Boolean(endpoint.secret), `id=${endpoint.id}`);
       writeSecret('AGENTCARD_WEBHOOK_SECRET', endpoint.secret);

@@ -138,7 +138,7 @@
     minBtn.setAttribute('aria-label', minimized ? 'Restore live view' : 'Minimize live view');
     // The host sizes this frame, so ask it to collapse to the bar when minimized (or restore).
     try {
-      window.parent.postMessage({ source: 'camofox-live-viewer', type: 'resize', minimized: minimized, expanded: expandedMode && !minimized }, '*');
+      window.parent.postMessage({ source: 'chusky-live-viewer', type: 'resize', minimized: minimized, expanded: expandedMode && !minimized }, '*');
     } catch (err) { /* not embedded */ }
 
     var text = '';

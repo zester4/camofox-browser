@@ -48,7 +48,7 @@ async function startServer(port = 0, extraEnv = {}) {
 
   await waitForServer(usePort);
 
-  console.log(`camofox-browser server started on port ${usePort}`);
+  console.log(`chuskybrowser server started on port ${usePort}`);
   return usePort;
 }
 

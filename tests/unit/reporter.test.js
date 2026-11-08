@@ -14,7 +14,7 @@ describe('anonymize', () => {
   // ---- File paths ----
 
   test('strips Unix home directory paths', () => {
-    const input = 'Error at /Users/pradeep/personal/camofox-browser/server.js:123:45';
+    const input = 'Error at /Users/pradeep/personal/chuskybrowser/server.js:123:45';
     const result = anonymize(input);
     expect(!result.includes('pradeep')).toBeTruthy();
     expect(!result.includes('/Users/')).toBeTruthy();
@@ -29,7 +29,7 @@ describe('anonymize', () => {
   });
 
   test('strips Windows paths', () => {
-    const input = 'at C:\\Users\\Administrator\\Desktop\\camofox\\server.js:99:10';
+    const input = 'at C:\\Users\\Administrator\\Desktop\\chusky\\server.js:99:10';
     const result = anonymize(input);
     expect(!result.includes('Administrator')).toBeTruthy();
     expect(result.includes('server.js')).toBeTruthy();
@@ -225,8 +225,8 @@ describe('anonymize', () => {
 
   test('handles a realistic stack trace with multiple leak vectors', () => {
     const stack = `Error: Navigation timeout of 30000ms exceeded
-    at navigate (/Users/pradeep/personal/camofox-browser/server.js:1500:15)
-    at processRequest (/Users/pradeep/personal/camofox-browser/server.js:800:10)
+    at navigate (/Users/pradeep/personal/chuskybrowser/server.js:1500:15)
+    at processRequest (/Users/pradeep/personal/chuskybrowser/server.js:800:10)
     url: https://super-secret-dashboard.internal.corp.com/page?auth=ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     proxy: http://user:pass@192.168.1.50:8080
     machine: e784079b295268

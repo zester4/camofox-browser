@@ -7,7 +7,7 @@ import { prepareExternalCamoufoxExecutable } from '../../lib/camoufox-executable
 const tempDirs = [];
 
 function makeTempDir() {
-  const dir = mkdtempSync(join(tmpdir(), 'camofox-executable-test-'));
+  const dir = mkdtempSync(join(tmpdir(), 'chusky-executable-test-'));
   tempDirs.push(dir);
   return dir;
 }
@@ -16,7 +16,7 @@ afterEach(() => {
   for (const dir of tempDirs.splice(0)) {
     rmSync(dir, { recursive: true, force: true });
   }
-  rmSync(join(tmpdir(), 'camofox-browser-external-camoufox'), { recursive: true, force: true });
+  rmSync(join(tmpdir(), 'chuskybrowser-external-camoufox'), { recursive: true, force: true });
 });
 
 describe('prepareExternalCamoufoxExecutable', () => {
@@ -34,7 +34,7 @@ describe('prepareExternalCamoufoxExecutable', () => {
     const prepared = prepareExternalCamoufoxExecutable(executable, { cacheDir });
 
     expect(prepared.resourceDir).toBe(bundleDir);
-    expect(prepared.executablePath).toContain('camofox-browser-external-camoufox');
+    expect(prepared.executablePath).toContain('chuskybrowser-external-camoufox');
     expect(existsSync(prepared.executablePath)).toBe(true);
     expect(existsSync(join(cacheDir, 'version.json'))).toBe(true);
     expect(existsSync(join(cacheDir, 'fontconfig'))).toBe(true);

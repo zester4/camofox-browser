@@ -1,6 +1,6 @@
 /**
  * Jest globalSetup for e2e tests.
- * Starts ONE camofox server + test site shared across ALL e2e test files.
+ * Starts ONE chusky server + test site shared across ALL e2e test files.
  * Writes connection URLs to a temp file so test files can read them.
  */
 import fs from 'fs';
@@ -13,7 +13,7 @@ import { DISPLAY } from '../helpers/test-env.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export const ENV_FILE = path.join(os.tmpdir(), 'camofox-e2e-env.json');
+export const ENV_FILE = path.join(os.tmpdir(), 'chusky-e2e-env.json');
 
 async function waitForServer(port, maxRetries = 30, interval = 1000) {
   for (let i = 0; i < maxRetries; i++) {
@@ -27,11 +27,11 @@ async function waitForServer(port, maxRetries = 30, interval = 1000) {
 }
 
 export default async function globalSetup() {
-  // --- Start camofox server ---
+  // --- Start chusky server ---
   const serverPort = Math.floor(3100 + Math.random() * 900);
   const cfg = loadConfig();
   const pluginDir = path.resolve(__dirname, '../..');
-  const uploadsTempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'camofox-e2e-uploads-'));
+  const uploadsTempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'chusky-e2e-uploads-'));
   const uploadsDir = path.join(uploadsTempDir, 'uploads');
   const uploadFixture = path.join(uploadsDir, 'upload.txt');
   const outsideUploadFixture = path.join(uploadsTempDir, 'outside.txt');
@@ -47,7 +47,7 @@ export default async function globalSetup() {
   const serverProcess = launchServer({
     pluginDir,
     port: serverPort,
-    env: { ...cfg.serverEnv, CAMOFOX_UPLOADS_DIR: uploadsDir, DEBUG_RESPONSES: 'false', DISPLAY },
+    env: { ...cfg.serverEnv, CHUSKY_UPLOADS_DIR: uploadsDir, DEBUG_RESPONSES: 'false', DISPLAY },
     log,
   });
 
@@ -56,7 +56,7 @@ export default async function globalSetup() {
   });
 
   await waitForServer(serverPort);
-  console.log(`[globalSetup] camofox server on port ${serverPort}`);
+  console.log(`[globalSetup] chusky server on port ${serverPort}`);
 
   // --- Start test site (express) ---
   const { startTestSite, getTestSiteUrl } = await import('../helpers/testSite.js');
@@ -73,9 +73,9 @@ export default async function globalSetup() {
     outsideUploadFixture,
   }));
 
-  globalThis.__CAMOFOX_UPLOADS_TEMP_DIR__ = uploadsTempDir;
+  globalThis.__CHUSKY_UPLOADS_TEMP_DIR__ = uploadsTempDir;
 
   // Store for globalTeardown (same process, globalThis persists)
-  globalThis.__CAMOFOX_SERVER_PROCESS__ = serverProcess;
-  globalThis.__CAMOFOX_ENV_FILE__ = ENV_FILE;
+  globalThis.__CHUSKY_SERVER_PROCESS__ = serverProcess;
+  globalThis.__CHUSKY_ENV_FILE__ = ENV_FILE;
 }

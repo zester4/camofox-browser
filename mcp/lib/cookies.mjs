@@ -1,5 +1,5 @@
 /**
- * Cookie file reading and parsing for camofox-browser.
+ * Cookie file reading and parsing for chuskybrowser.
  */
 
 import fs from 'fs/promises';

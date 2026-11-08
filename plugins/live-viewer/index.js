@@ -3,7 +3,7 @@
  *
  * Each user gets a signed, expiring link to watch one of their own tabs.
  * The viewer page polls screenshots from the server, so the browser never
- * sees CAMOFOX_ACCESS_KEY and no shared VNC password is needed.
+ * sees CHUSKY_ACCESS_KEY and no shared VNC password is needed.
  *
  * During a handoff (see lib/tab-control.js) the agent pauses and a person can
  * act on the tab from the same page: click, type, press keys and scroll. The
@@ -283,7 +283,7 @@ export async function register(app, ctx) {
 
   app.post('/live-viewer/links', auth(), (req, res) => {
     if (!secret) {
-      return res.status(503).json({ error: 'CAMOFOX_ACCESS_KEY must be set to issue viewer links' });
+      return res.status(503).json({ error: 'CHUSKY_ACCESS_KEY must be set to issue viewer links' });
     }
 
     const userId = req.body?.userId;

@@ -1,4 +1,4 @@
-# AgentCard: payments for agents on Camofox
+# AgentCard: payments for agents on Chusky
 
 Lets an agent buy things on any website with the user's own card. The user stores
 their card once, on AgentCard's page. The card number never reaches our server or
@@ -16,7 +16,7 @@ live AgentCard. See "What is verified" at the end.
    `node agentcard/scripts/sandbox-check.mjs --register-url https://<railway-url>/agentcard/webhooks`
 3. Without credentials the routes answer `503` and name the missing variables.
 
-Every route below needs the app's access key, like the other Camofox routes.
+Every route below needs the app's access key, like the other Chusky routes.
 Pass our stable user id as `userId` (body or query). The webhook is the only route
 without it.
 
@@ -39,7 +39,7 @@ without it.
 3. **Check where we can pay.** `GET /agentcard/processors` lists processors AgentCard
    can complete. `needsPreparation` lists those that need step 4 first.
 4. **Pay.** Two ways:
-   - **Browser pay (Camofox, any site).** Open the checkout in a tab. Then:
+   - **Browser pay (Chusky, any site).** Open the checkout in a tab. Then:
      `POST /agentcard/tabs/{tabId}/payment` with
      `{ "userId", "merchant", "amount", "currency", "checkoutOrigin" }`. Returns
      `attachmentId`. Now the agent clicks Pay in the tab as normal (existing click route).
@@ -92,7 +92,7 @@ without it.
 
 ## Limits in this version
 
-- Browser pay works on Camofox (Firefox) with no Chromium. It uses the documented
+- Browser pay works on Chusky (Firefox) with no Chromium. It uses the documented
   "your own interception" path. The AgentCard SDK's browser attach is Chromium-only,
   and it is not used.
 - Processors that need approval first (`needsPreparation`) can't be paid through the
@@ -111,7 +111,7 @@ without it.
 - Live sandbox (`node agentcard/scripts/sandbox-check.mjs`): token, enrolment session,
   polling, and error handling passed in the user's Codespace (6 of 6).
 - Not yet verified live: the purchase path, presets, outcomes, disconnect, and the
-  browser pay on Camofox against a real processor. Each is a sandbox step.
+  browser pay on Chusky against a real processor. Each is a sandbox step.
 
 ## Commerce: products, food, tables, flights, merchant check
 

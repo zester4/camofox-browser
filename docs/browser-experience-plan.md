@@ -111,7 +111,7 @@ Planned approach:
 - **Regression.** Full unit suite: the same 7 failing suites and 33 failing tests as the environment baseline (no Camoufox binary, add-on download blocked). Nothing new fails. Passing tests rose from 850 to 877.
 - **OpenAPI.** Regenerated with `npm run generate-openapi`, 40 paths.
 - **Live check, to run on Railway:**
-  - `node scripts/test-camofox.mjs --macros @bestbuy_search,@indeed_search,@pubmed_search,@zillow_search`
+  - `node scripts/test-chusky.mjs --macros @bestbuy_search,@indeed_search,@pubmed_search,@zillow_search`
   - `GET /tabs/:tabId/state` on a page with a cookie banner returns `consent`.
   - `POST /tabs/:tabId/overlays/dismiss` closes a pop-up and leaves an "Accept all" button alone.
 
@@ -122,7 +122,7 @@ Planned approach:
 | P1 | Benchmark pages for the stealth test | Choose two or three fingerprint and bot-detection pages |
 | P2 | Sites that block robots.txt (Airbnb, IMDb, Amazon UK, Skyscanner, Google News) | Leave them out until you confirm the terms for automated access |
 | P3 | Residential proxy | Decide after the benchmark |
-| P4 | Eve tool wrappers for the two new routes | Confirm the helper names in `agent/lib/camofox.ts` and I will write them |
+| P4 | Eve tool wrappers for the two new routes | Confirm the helper names in `agent/lib/chusky.ts` and I will write them |
 
 ## 8. Known limits
 

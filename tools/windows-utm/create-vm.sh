@@ -8,12 +8,12 @@ usage() {
 Usage: tools/windows-utm/create-vm.sh --installer PATH --provisioning PATH --bootstrap PATH [--output PATH] [--ssh-port PORT]
 
 Creates a new UTM bundle with a fresh sparse NVMe disk and copies a verified
-Windows installer, CAMOFOX_E2E provisioning ISO, and FAT bootstrap image into
+Windows installer, CHUSKY_E2E provisioning ISO, and FAT bootstrap image into
 that bundle. Existing VMs are never cloned or changed.
 EOF
 }
 
-output="$HOME/Library/Containers/com.utmapp.UTM/Data/Documents/Camofox Windows E2E.utm"
+output="$HOME/Library/Containers/com.utmapp.UTM/Data/Documents/Chusky Windows E2E.utm"
 installer=''
 provisioning=''
 bootstrap=''
@@ -57,7 +57,7 @@ mkdir -p "$output/Data"
 trap 'rm -rf "$output"' ERR INT TERM
 
 cp -p "$installer" "$output/Data/windows-installer.iso"
-cp -p "$provisioning" "$output/Data/camofox-provisioning.iso"
+cp -p "$provisioning" "$output/Data/chusky-provisioning.iso"
 cp -p "$bootstrap" "$output/Data/windows-fat-bootstrap.img"
 cp -p "$firmware" "$output/Data/efi_vars.fd"
 "$qemu_img" create -f qcow2 "$output/Data/$disk_uuid.qcow2" 80G >/dev/null
@@ -70,7 +70,7 @@ def drive(identifier, name, image_type, interface, read_only=False):
             'Interface': interface, 'InterfaceVersion': 1, 'ReadOnly': read_only}
 config = {
  'Backend': 'QEMU', 'ConfigurationVersion': 4,
- 'Information': {'Icon': 'windows', 'IconCustom': False, 'Name': 'Camofox Windows E2E', 'UUID': uuid},
+ 'Information': {'Icon': 'windows', 'IconCustom': False, 'Name': 'Chusky Windows E2E', 'UUID': uuid},
  'System': {'Architecture': 'aarch64', 'CPU': 'default', 'CPUCount': 8, 'CPUFlagsAdd': [], 'CPUFlagsRemove': [],
             'ForceMulticore': False, 'JITCacheSize': 0, 'MemorySize': 16384, 'Target': 'virt'},
  'QEMU': {'AdditionalArguments': [], 'BalloonDevice': False, 'DebugLog': True, 'Hypervisor': True,
@@ -78,7 +78,7 @@ config = {
  'Input': {'MaximumUsbShare': 3, 'UsbBusSupport': '3.0', 'UsbSharing': False},
  'Sharing': {'ClipboardSharing': False, 'DirectoryShareMode': 'None', 'DirectoryShareReadOnly': True},
  'Display': [{'DownscalingFilter': 'Linear', 'DynamicResolution': False, 'Hardware': 'virtio-ramfb-gl', 'NativeResolution': False, 'UpscalingFilter': 'Nearest'}],
- 'Drive': [drive(bootstrap_disk, 'windows-fat-bootstrap.img', 'Disk', 'USB', True), drive(provision_cd, 'camofox-provisioning.iso', 'CD', 'USB', True), drive(install_cd, 'windows-installer.iso', 'Disk', 'USB', True), drive(disk, disk + '.qcow2', 'Disk', 'NVMe')],
+ 'Drive': [drive(bootstrap_disk, 'windows-fat-bootstrap.img', 'Disk', 'USB', True), drive(provision_cd, 'chusky-provisioning.iso', 'CD', 'USB', True), drive(install_cd, 'windows-installer.iso', 'Disk', 'USB', True), drive(disk, disk + '.qcow2', 'Disk', 'NVMe')],
  'Network': [{'Hardware': 'virtio-net-pci', 'IsolateFromHost': False, 'MacAddress': mac, 'Mode': 'Emulated',
               'PortForward': [{'Protocol': 'TCP', 'HostAddress': '127.0.0.1', 'HostPort': int(port), 'GuestAddress': '127.0.0.1', 'GuestPort': 22}]}],
  'Serial': [], 'Sound': [{'Hardware': 'intel-hda'}]
@@ -88,5 +88,5 @@ PY
 plutil -lint "$output/config.plist" >/dev/null
 "$qemu_img" check "$output/Data/$disk_uuid.qcow2" >/dev/null
 trap - ERR INT TERM
-printf 'Created isolated UTM bundle: %s\nUUID: %s\nSSH: ssh -i ~/.ssh/camofox-windows-e2e -p %s camofox-e2e@127.0.0.1\n' "$output" "$uuid" "$ssh_port"
+printf 'Created isolated UTM bundle: %s\nUUID: %s\nSSH: ssh -i ~/.ssh/chusky-windows-e2e -p %s chusky-e2e@127.0.0.1\n' "$output" "$uuid" "$ssh_port"
 open -g -a UTM "$output"

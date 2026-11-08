@@ -1,4 +1,4 @@
-# Contributing to camofox-browser
+# Contributing to chuskybrowser
 
 ## Environment Variable Security
 
@@ -9,7 +9,7 @@ When spawning child processes (e.g., the server from the plugin), only pass an e
 ```typescript
 // WRONG — leaks all host secrets to the child process
 spawn("node", [serverPath], {
-  env: { ...process.env, CAMOFOX_PORT: "9377" },
+  env: { ...process.env, CHUSKY_PORT: "9377" },
 });
 
 // RIGHT — only what the child actually needs
@@ -18,14 +18,14 @@ spawn("node", [serverPath], {
     PATH: process.env.PATH,
     HOME: process.env.HOME,
     NODE_ENV: process.env.NODE_ENV,
-    CAMOFOX_PORT: "9377",
+    CHUSKY_PORT: "9377",
   },
 });
 ```
 
 If the child process needs a new env var, add it to the whitelist explicitly in both `plugin.ts` and `tests/helpers/startServer.js`.
 
-**Do not use `dotenv` or load `.env` files.** The server reads its configuration from explicitly passed environment variables only. Users running camofox alongside other tools may have `.env` files with secrets that should never be loaded into this process.
+**Do not use `dotenv` or load `.env` files.** The server reads its configuration from explicitly passed environment variables only. Users running chusky alongside other tools may have `.env` files with secrets that should never be loaded into this process.
 
 ## Testing
 

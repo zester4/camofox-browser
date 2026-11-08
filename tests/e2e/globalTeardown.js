@@ -1,6 +1,6 @@
 /**
  * Jest globalTeardown for e2e tests.
- * Stops the shared camofox server + test site.
+ * Stops the shared chusky server + test site.
  */
 import fs from 'fs';
 
@@ -13,8 +13,8 @@ export default async function globalTeardown() {
     console.error('[globalTeardown] test site stop error:', e.message);
   }
 
-  // Kill camofox server
-  const proc = globalThis.__CAMOFOX_SERVER_PROCESS__;
+  // Kill chusky server
+  const proc = globalThis.__CHUSKY_SERVER_PROCESS__;
   if (proc) {
     await new Promise((resolve) => {
       proc.on('close', resolve);
@@ -27,12 +27,12 @@ export default async function globalTeardown() {
   }
 
   // Clean up temp file
-  const envFile = globalThis.__CAMOFOX_ENV_FILE__;
+  const envFile = globalThis.__CHUSKY_ENV_FILE__;
   if (envFile) {
     try { fs.unlinkSync(envFile); } catch (e) { /* ignore */ }
   }
 
-  const uploadsTempDir = globalThis.__CAMOFOX_UPLOADS_TEMP_DIR__;
+  const uploadsTempDir = globalThis.__CHUSKY_UPLOADS_TEMP_DIR__;
   if (uploadsTempDir) {
     try { fs.rmSync(uploadsTempDir, { recursive: true, force: true }); } catch (e) { /* ignore */ }
   }

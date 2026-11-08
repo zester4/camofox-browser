@@ -1,6 +1,6 @@
 # AgentCard integration
 
-Payments for agents running on Camofox. Each user gets a browser and a payment
+Payments for agents running on Chusky. Each user gets a browser and a payment
 system together (plan sections 0 and 5). The user stores their own card once, on
 AgentCard's page. The card number never reaches this app or the model. Each
 purchase needs the user's approval on their own device with their passkey.
@@ -67,7 +67,7 @@ agentcard/
     webhook.js        HMAC verification of the raw body
     webhooks.js       receiver: verify, de-duplicate, dispatch, 500 on failure
     http.js           Express handlers (server.js mounts them)
-    interception.js   pays on any page (Camofox included): pauses the card request, approval, fulfil
+    interception.js   pays on any page (Chusky included): pauses the card request, approval, fulfil
     account.js        processors, vault link, disconnect/erase, spend presets
     commerce.js       buy tool from @agent-cards/commerce-sdk, bound to our userId; merchant check
     service.js        composes everything; boot never fails without credentials
@@ -172,7 +172,7 @@ These are not fully documented. The code handles them defensively, and the live 
 ## Not built yet
 
 - Live verification of the purchase approval path (needs a sandbox user with a card).
-- Q4 answered from the SDK's own docs: its browser attach is Chromium-only, so it is not used on Camofox. Payment on Camofox uses the interception path instead, which is unverified live.
+- Q4 answered from the SDK's own docs: its browser attach is Chromium-only, so it is not used on Chusky. Payment on Chusky uses the interception path instead, which is unverified live.
 - Live verification of the buy tool against AgentCard's `/buy` endpoints (offline tests use an injected buy tool; the merchant check runs over HTTP against the documented shape).
 - Flight traveler details and flight cancellation. The current Commerce SDK and REST docs do not document `buy_save_traveler` or `buy_cancel_flight`, so they are not built. Flights are bought through the buy tool as `book` products.
 - Issuing, identity verification, company wallet and user balance (out of scope for this release).

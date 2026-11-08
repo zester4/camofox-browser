@@ -24,11 +24,11 @@ Some pages must not be handled by the agent: a captcha, a sign-in, a one-time co
 
 ## Saved logins
 
-- After a handoff ends with Done or release, the server saves the browser session for that userId, encrypted with `CAMOFOX_STORAGE_KEY`.
+- After a handoff ends with Done or release, the server saves the browser session for that userId, encrypted with `CHUSKY_STORAGE_KEY`.
 - The next tab for that userId starts signed in.
-- Requires `CAMOFOX_STORAGE_KEY` and a `CAMOFOX_PROFILE_DIR` on a persistent volume.
+- Requires `CHUSKY_STORAGE_KEY` and a `CHUSKY_PROFILE_DIR` on a persistent volume.
 - A handoff that times out from idleness does not save. Ask the person to press Done.
-- To forget a user's saved login: delete `storage-state.enc` in that user's folder under `CAMOFOX_PROFILE_DIR` (the folder is named from the userId), then call `DELETE /sessions/{userId}` to close any open session. There is no API call that deletes the saved file itself.
+- To forget a user's saved login: delete `storage-state.enc` in that user's folder under `CHUSKY_PROFILE_DIR` (the folder is named from the userId), then call `DELETE /sessions/{userId}` to close any open session. There is no API call that deletes the saved file itself.
 
 ## Limits
 

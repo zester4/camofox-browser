@@ -25,7 +25,7 @@ const proc = spawn(process.execPath, [SERVER], {
   env: {
     PATH: process.env.PATH, HOME: process.env.HOME, USER: process.env.USER,
     NODE_OPTIONS: process.env.NODE_OPTIONS || "",
-    CAMOFOX_BASE_URL: process.env.CAMOFOX_BASE_URL || "http://localhost:9377",
+    CHUSKY_BASE_URL: process.env.CHUSKY_BASE_URL || "http://localhost:9377",
   },
   stdio: ["pipe", "pipe", "pipe"],
 });

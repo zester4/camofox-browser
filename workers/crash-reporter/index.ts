@@ -1,5 +1,5 @@
 /**
- * Cloudflare Worker relay for camofox-browser crash reports.
+ * Cloudflare Worker relay for chuskybrowser crash reports.
  *
  * Accepts anonymized crash/hang/stall reports from clients and files them as
  * GitHub Issues using a GitHub App. The private key lives here as an env secret
@@ -20,7 +20,7 @@ interface Env {
   GH_APP_ID: string;
   GH_INSTALL_ID: string;
   GH_PRIVATE_KEY: string;
-  GH_REPO?: string; // default: jo-inc/camofox-browser
+  GH_REPO?: string; // default: jo-inc/chuskybrowser
 }
 
 // --- Rate limiting (in-memory, per-isolate) ---
@@ -255,7 +255,7 @@ export default {
           return Response.json({ error: "github auth failed" }, { status: 502, headers: cors });
         }
 
-        const repo = env.GH_REPO || "jo-inc/camofox-browser";
+        const repo = env.GH_REPO || "jo-inc/chuskybrowser";
 
         // Check for existing issue with same signature
         const existing = await findExistingIssue(token, repo, payload.signature);

@@ -1,5 +1,5 @@
 {
-  "name": "@askjo/camofox-browser",
+  "name": "chuskybrowser",
   "version": "1.18.1",
   "description": "Headless browser automation server and OpenClaw plugin for AI agents - anti-detection, element refs, and session isolation",
   "type": "module",
@@ -19,7 +19,7 @@
     "automation",
     "headless",
     "scraping",
-    "camofox",
+    "chusky",
     "camoufox",
     "anti-detection",
     "ai-agent",
@@ -38,8 +38,8 @@
     "server.js",
     "plugin.js",
     "openclaw.plugin.json",
-    "camofox.config.json",
-    "bin/camofox-browser.js",
+    "chusky.config.json",
+    "bin/chuskybrowser.js",
     "lib/",
     "mcp/server.mjs",
     "mcp/package.json",
@@ -72,67 +72,67 @@
     },
     "tools": [
       {
-        "name": "camofox_create_tab",
+        "name": "chusky_create_tab",
         "description": "Open a new browser tab at a URL"
       },
       {
-        "name": "camofox_snapshot",
+        "name": "chusky_snapshot",
         "description": "Get accessibility snapshot with element refs"
       },
       {
-        "name": "camofox_click",
+        "name": "chusky_click",
         "description": "Click an element by ref or CSS selector"
       },
       {
-        "name": "camofox_type",
+        "name": "chusky_type",
         "description": "Type text into an element"
       },
       {
-        "name": "camofox_navigate",
+        "name": "chusky_navigate",
         "description": "Navigate to URL or search macro"
       },
       {
-        "name": "camofox_scroll",
+        "name": "chusky_scroll",
         "description": "Scroll page up/down/left/right"
       },
       {
-        "name": "camofox_screenshot",
+        "name": "chusky_screenshot",
         "description": "Capture page screenshot"
       },
       {
-        "name": "camofox_close_tab",
+        "name": "chusky_close_tab",
         "description": "Close a browser tab"
       },
       {
-        "name": "camofox_evaluate",
+        "name": "chusky_evaluate",
         "description": "Execute JavaScript in a Camoufox tab page context"
       },
       {
-        "name": "camofox_list_tabs",
+        "name": "chusky_list_tabs",
         "description": "List open tabs for a user"
       },
       {
-        "name": "camofox_import_cookies",
-        "description": "Import Netscape cookie file (requires CAMOFOX_API_KEY)"
+        "name": "chusky_import_cookies",
+        "description": "Import Netscape cookie file (requires CHUSKY_API_KEY)"
       },
       {
-        "name": "camofox_handoff_start",
+        "name": "chusky_handoff_start",
         "description": "Hand a tab to the human for a login, a CAPTCHA or a check"
       },
       {
-        "name": "camofox_handoff_release",
+        "name": "chusky_handoff_release",
         "description": "Return control of a tab to the agent after a handoff."
       },
       {
-        "name": "camofox_pay_arm",
+        "name": "chusky_pay_arm",
         "description": "Pay on this tab with the user's own card"
       },
       {
-        "name": "camofox_pay_status",
+        "name": "chusky_pay_status",
         "description": "Read a payment attachment"
       },
       {
-        "name": "camofox_pay_disarm",
+        "name": "chusky_pay_disarm",
         "description": "Stop paying on a tab"
       },
       {
@@ -227,8 +227,8 @@
     "hono": "4.13.7"
   },
   "bin": {
-    "camofox-browser": "./bin/camofox-browser.js",
-    "camofox-browser-mcp": "./mcp/server.mjs"
+    "chuskybrowser": "./bin/chuskybrowser.js",
+    "chuskybrowser-mcp": "./mcp/server.mjs"
   },
   "peerDependencies": {
     "openclaw": ">=2026.9.4"

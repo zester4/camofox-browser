@@ -23,7 +23,7 @@ describe('vnc launcher config', () => {
       },
       {
         PATH: '/usr/bin',
-        HOME: '/home/camofox',
+        HOME: '/home/chusky',
         VNC_BIND: '0.0.0.0',
         VNC_RFB_BIND: '192.0.2.1',
         SECRET_TOKEN: 'do-not-forward',
@@ -32,7 +32,7 @@ describe('vnc launcher config', () => {
 
     expect(env).toEqual({
       PATH: '/usr/bin',
-      HOME: '/home/camofox',
+      HOME: '/home/chusky',
       VNC_BIND: '0.0.0.0',
       VNC_RFB_BIND: '192.0.2.1',
       VNC_PASSWORD: 'secret',

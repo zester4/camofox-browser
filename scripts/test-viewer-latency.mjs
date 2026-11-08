@@ -4,7 +4,7 @@
  *
  *   node scripts/test-viewer-latency.mjs
  *
- * Needs the server running (npm start) with CAMOFOX_ACCESS_KEY set in .env. Starts a local page with
+ * Needs the server running (npm start) with CHUSKY_ACCESS_KEY set in .env. Starts a local page with
  * one text box, hands the tab to the person, types short strings through the viewer's input route,
  * and measures three times for each string:
  *   ack      the viewer's input request returns
@@ -27,8 +27,8 @@ import { loadEnvFile } from 'node:process';
 const envPath = resolve(process.cwd(), '.env');
 if (existsSync(envPath)) loadEnvFile(envPath);
 
-const BASE = (process.env.CAMOFOX_BASE_URL || 'http://localhost:9377').trim().replace(/\/+$/, '');
-const ACCESS_KEY = (process.env.CAMOFOX_ACCESS_KEY || process.env.CAMOFOX_API_KEY || '').trim();
+const BASE = (process.env.CHUSKY_BASE_URL || 'http://localhost:9377').trim().replace(/\/+$/, '');
+const ACCESS_KEY = (process.env.CHUSKY_ACCESS_KEY || process.env.CHUSKY_API_KEY || '').trim();
 const ROUNDS = Number(process.env.VIEWER_ROUNDS || 12);
 const LIMITS = {
   ack: Number(process.env.VIEWER_ACK_P95_MS || 1000),
@@ -132,7 +132,7 @@ const hash = (buffer) => (buffer ? createHash('sha1').update(buffer).digest('hex
 async function main() {
   check('server answers', (await call('/live-viewer/view', { key: '' })).status < 500);
   if (!ACCESS_KEY) {
-    check('CAMOFOX_ACCESS_KEY is set in .env', false, 'the viewer needs it to issue links');
+    check('CHUSKY_ACCESS_KEY is set in .env', false, 'the viewer needs it to issue links');
     return;
   }
 

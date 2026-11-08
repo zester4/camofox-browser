@@ -12,7 +12,7 @@ import { downloadBundledCamoufox } from './lib/camoufox-download.js';
 const EXTERNAL_EXECUTABLE_ENV_VARS = [
   'CAMOUFOX_EXECUTABLE',
   'CAMOUFOX_EXECUTABLE_PATH',
-  'CAMOFOX_EXECUTABLE_PATH',
+  'CHUSKY_EXECUTABLE_PATH',
 ];
 
 function camoufoxCacheDir() {
@@ -27,7 +27,7 @@ function camoufoxCacheDir() {
 }
 
 function warn(message) {
-  process.stderr.write(`[camofox-browser] postinstall warning: ${message}\n`);
+  process.stderr.write(`[chuskybrowser] postinstall warning: ${message}\n`);
 }
 
 function fail(message) {
@@ -59,8 +59,8 @@ function assertExternalExecutable(path) {
 }
 
 export async function main() {
-  if (process.env.CAMOFOX_SKIP_DOWNLOAD === '1' || process.env.CAMOFOX_SKIP_DOWNLOAD === 'true') {
-    process.stderr.write('[camofox-browser] postinstall: skipping binary download (CAMOFOX_SKIP_DOWNLOAD=1)\n');
+  if (process.env.CHUSKY_SKIP_DOWNLOAD === '1' || process.env.CHUSKY_SKIP_DOWNLOAD === 'true') {
+    process.stderr.write('[chuskybrowser] postinstall: skipping binary download (CHUSKY_SKIP_DOWNLOAD=1)\n');
     return;
   }
 
@@ -68,14 +68,14 @@ export async function main() {
   if (externalExecutable) {
     assertExternalExecutable(externalExecutable.value);
     process.stdout.write(
-      `[camofox-browser] postinstall: ${externalExecutable.name} is set; skipping bundled Camoufox download.\n`
+      `[chuskybrowser] postinstall: ${externalExecutable.name} is set; skipping bundled Camoufox download.\n`
     );
     return;
   }
 
   const versionFile = join(camoufoxCacheDir(), 'version.json');
   if (existsSync(versionFile)) {
-    process.stdout.write('[camofox-browser] postinstall: Camoufox binary already cached.\n');
+    process.stdout.write('[chuskybrowser] postinstall: Camoufox binary already cached.\n');
     return;
   }
 

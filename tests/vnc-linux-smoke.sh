@@ -43,7 +43,7 @@ wait_ready() {
   done
   echo "VNC did not become ready" >&2
   ps -ef >&2
-  [ ! -f /tmp/camofox-x11vnc.log ] || cat /tmp/camofox-x11vnc.log >&2
+  [ ! -f /tmp/chusky-x11vnc.log ] || cat /tmp/chusky-x11vnc.log >&2
   exit 1
 }
 

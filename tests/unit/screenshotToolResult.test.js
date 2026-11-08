@@ -1,7 +1,7 @@
 import http from 'http';
 
 /**
- * Unit tests for the plugin's camofox_screenshot tool result format.
+ * Unit tests for the plugin's chusky_screenshot tool result format.
  *
  * These tests spin up a tiny mock server that returns PNG binary (like the real
  * server's GET /tabs/:tabId/screenshot endpoint), then exercise both the OLD

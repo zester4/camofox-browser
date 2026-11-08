@@ -2,7 +2,7 @@
 // Self-contained smoke test for mcp/server.mjs — no Jest, no REST server.
 // Verifies: handshake completes, every contract tool is listed with valid schemas,
 // and an unknown tool call returns isError. Tool *execution* (which needs the
-// camofox REST server) is out of scope here.
+// chusky REST server) is out of scope here.
 //
 // Run: node scripts/test-mcp.mjs   (or `npm run test:mcp`)
 // Exits non-zero on any failure.
@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 import { TOOL_NAMES } from "../mcp/lib/tool-contracts.mjs";
 
 const ROOT = resolve(fileURLToPath(import.meta.url), "..", "..");
-const SERVER = process.env.CAMOFOX_MCP_SERVER || resolve(ROOT, "mcp", "server.mjs");
+const SERVER = process.env.CHUSKY_MCP_SERVER || resolve(ROOT, "mcp", "server.mjs");
 
 // The same list the server is built from, so the two cannot drift apart.
 const EXPECTED_TOOLS = TOOL_NAMES;
@@ -26,7 +26,7 @@ const proc = spawn(process.execPath, [SERVER], {
     HOME: process.env.HOME,
     USER: process.env.USER,
     NODE_OPTIONS: process.env.NODE_OPTIONS || "",
-    CAMOFOX_BASE_URL: "http://localhost:1",
+    CHUSKY_BASE_URL: "http://localhost:1",
   },
   stdio: ["pipe", "pipe", "pipe"],
 });
@@ -94,7 +94,7 @@ async function main() {
     capabilities: {},
     clientInfo: { name: "test", version: "0" },
   });
-  check("handshake returns server name", init.result.serverInfo.name === "camofox-browser", `got ${init.result.serverInfo?.name}`);
+  check("handshake returns server name", init.result.serverInfo.name === "chuskybrowser", `got ${init.result.serverInfo?.name}`);
   notify("notifications/initialized");
 
   const list = await call("tools/list", {});
@@ -108,7 +108,7 @@ async function main() {
     check(`"${t.name}" has inputSchema.object`, t.inputSchema?.type === "object" && t.inputSchema.properties !== undefined);
   }
 
-  const nav = tools.find((t) => t.name === "camofox_navigate");
+  const nav = tools.find((t) => t.name === "chusky_navigate");
   const macros = nav.inputSchema.properties.macro.enum;
   check("navigate exposes google + reddit macros", macros.includes("@google_search") && macros.includes("@reddit_search"), `got ${macros.length} macros`);
   check("navigate has >=13 macros", macros.length >= 13, `got ${macros.length}`);

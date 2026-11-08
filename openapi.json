@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "camofox-browser",
+    "title": "chuskybrowser",
     "version": "1.18.1",
     "description": "Anti-detection browser automation server for AI agents. Accessibility snapshots, element refs, session isolation, cookie import, proxy rotation, and structured logs.",
     "license": {
@@ -59,12 +59,12 @@
       "BearerAuth": {
         "type": "http",
         "scheme": "bearer",
-        "description": "Bearer token matching CAMOFOX_API_KEY (per-route auth for sensitive endpoints like cookie import and traces)."
+        "description": "Bearer token matching CHUSKY_API_KEY (per-route auth for sensitive endpoints like cookie import and traces)."
       },
       "AccessKeyAuth": {
         "type": "http",
         "scheme": "bearer",
-        "description": "Bearer token matching CAMOFOX_ACCESS_KEY. When set, gates all routes except /health, cookie import, and /stop. Acts as a superkey -- also accepted by endpoints that normally require CAMOFOX_API_KEY."
+        "description": "Bearer token matching CHUSKY_ACCESS_KEY. When set, gates all routes except /health, cookie import, and /stop. Acts as a superkey -- also accepted by endpoints that normally require CHUSKY_API_KEY."
       }
     },
     "schemas": {
@@ -1912,7 +1912,7 @@
           "Interaction"
         ],
         "summary": "Arm payment on a tab",
-        "description": "Call before the agent clicks Pay in this tab. The next card request to a supported processor is paused, the user is asked to approve on their device, and AgentCard's response is replayed. Read the outcome with GET .../payment/{attachmentId}. The merchant's own confirmation still has to be read from the page. Works on Camofox (Firefox) and does not need Chromium.\n",
+        "description": "Call before the agent clicks Pay in this tab. The next card request to a supported processor is paused, the user is asked to approve on their device, and AgentCard's response is replayed. Read the outcome with GET .../payment/{attachmentId}. The merchant's own confirmation still has to be read from the page. Works on Chusky (Firefox) and does not need Chromium.\n",
         "parameters": [
           {
             "name": "tabId",
@@ -3240,7 +3240,7 @@
           "Interaction"
         ],
         "summary": "Attach a file to an upload control",
-        "description": "Attaches files from the configured upload directory without going through the native OS file dialog. Set CAMOFOX_UPLOADS_DIR to a directory that contains the files (default: ~/.camofox/uploads). Two strategies are tried in order: (1) if an <input type=\"file\"> is already present, call Playwright setInputFiles on it directly (works for hidden inputs); (2) otherwise arm a filechooser listener, activate the trigger element (ref or selector) via keyboard (focus + Enter) then a forced click as fallback, and call setFiles on the resulting chooser. Each path must be an absolute path that resolves inside the configured upload directory.\n",
+        "description": "Attaches files from the configured upload directory without going through the native OS file dialog. Set CHUSKY_UPLOADS_DIR to a directory that contains the files (default: ~/.chusky/uploads). Two strategies are tried in order: (1) if an <input type=\"file\"> is already present, call Playwright setInputFiles on it directly (works for hidden inputs); (2) otherwise arm a filechooser listener, activate the trigger element (ref or selector) via keyboard (focus + Enter) then a forced click as fallback, and call setFiles on the resulting chooser. Each path must be an absolute path that resolves inside the configured upload directory.\n",
         "parameters": [
           {
             "name": "tabId",
@@ -3266,7 +3266,7 @@
                     "type": "string"
                   },
                   "path": {
-                    "description": "Absolute path, or array of paths, that resolves within CAMOFOX_UPLOADS_DIR.",
+                    "description": "Absolute path, or array of paths, that resolves within CHUSKY_UPLOADS_DIR.",
                     "oneOf": [
                       {
                         "type": "string"

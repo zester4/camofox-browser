@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Scenario test for a running Camofox server.
+ * Scenario test for a running Chusky server.
  *
  * Each target is a scenario: open a URL, run steps (wait, click, type, scroll,
  * expect), then record the fingerprint and the full visible text.

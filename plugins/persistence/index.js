@@ -1,10 +1,10 @@
 /**
- * Persistence plugin for camofox-browser.
+ * Persistence plugin for chuskybrowser.
  *
  * Saves and restores per-user browser storage state (cookies + localStorage
  * + IndexedDB) across session restarts using Playwright's storageState API.
  *
- * Configuration (camofox.config.json):
+ * Configuration (chusky.config.json):
  *   {
  *     "plugins": {
  *       "persistence": {
@@ -16,7 +16,7 @@
  *   }
  *
  * The profile directory can also be set via environment variable:
- *   CAMOFOX_PROFILE_DIR=/data/profiles
+ *   CHUSKY_PROFILE_DIR=/data/profiles
  *
  * Each userId gets a deterministic SHA256-hashed subdirectory under profileDir.
  * Storage state is checkpointed on cookie import, session close, and shutdown.
@@ -50,24 +50,24 @@ async function removeIfExists(p) {
 export async function register(app, ctx, pluginConfig = {}) {
   const { events, config, log } = ctx;
 
-  // Resolve profileDir: env var > plugin config > global config default (~/.camofox/profiles)
-  const profileDir = process.env.CAMOFOX_PROFILE_DIR || pluginConfig.profileDir || config.profileDir;
+  // Resolve profileDir: env var > plugin config > global config default (~/.chusky/profiles)
+  const profileDir = process.env.CHUSKY_PROFILE_DIR || pluginConfig.profileDir || config.profileDir;
   if (!profileDir) {
     log('warn', 'persistence plugin: no profileDir configured, plugin disabled');
     return;
   }
 
-  // Saved sessions are encrypted with CAMOFOX_STORAGE_KEY. Without a valid key
+  // Saved sessions are encrypted with CHUSKY_STORAGE_KEY. Without a valid key
   // the plugin stays off, so no session is ever written in plain text.
   let storageKey;
   try {
     storageKey = parseStorageKey(config.storageKey);
   } catch (err) {
-    log('error', 'persistence plugin disabled: invalid CAMOFOX_STORAGE_KEY', { error: err.message });
+    log('error', 'persistence plugin disabled: invalid CHUSKY_STORAGE_KEY', { error: err.message });
     return;
   }
   if (!storageKey) {
-    log('warn', 'persistence plugin disabled: CAMOFOX_STORAGE_KEY is not set, sessions will not be saved');
+    log('warn', 'persistence plugin disabled: CHUSKY_STORAGE_KEY is not set, sessions will not be saved');
     return;
   }
 
