@@ -1,0 +1,216 @@
+#!/usr/bin/env node
+/**
+ * Measures how quickly a person's typing shows up in the live viewer, against a running server.
+ *
+ *   node scripts/test-viewer-latency.mjs
+ *
+ * Needs the server running (npm start) with CAMOFOX_ACCESS_KEY set in .env. Starts a local page with
+ * one text box, hands the tab to the person, types short strings through the viewer's input route,
+ * and measures three times for each string:
+ *   ack      the viewer's input request returns
+ *   page     the page itself has the text (read from the page, not the picture)
+ *   picture  the picture the person sees changes (the frame bytes change)
+ *
+ * Thresholds (ms, p95) can be changed with VIEWER_ACK_P95_MS, VIEWER_PAGE_P95_MS, VIEWER_PICTURE_P95_MS.
+ * Note: the picture check counts any change in the frame, including the text caret blinking, so it can
+ * only be earlier than the true text appearance, never later.
+ *
+ * Exit code is 0 only when every check passed.
+ */
+import { createHash, randomUUID } from 'node:crypto';
+import { createServer } from 'node:http';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { loadEnvFile } from 'node:process';
+
+const envPath = resolve(process.cwd(), '.env');
+if (existsSync(envPath)) loadEnvFile(envPath);
+
+const BASE = (process.env.CAMOFOX_BASE_URL || 'http://localhost:9377').trim().replace(/\/+$/, '');
+const ACCESS_KEY = (process.env.CAMOFOX_ACCESS_KEY || process.env.CAMOFOX_API_KEY || '').trim();
+const ROUNDS = Number(process.env.VIEWER_ROUNDS || 12);
+const LIMITS = {
+  ack: Number(process.env.VIEWER_ACK_P95_MS || 1000),
+  page: Number(process.env.VIEWER_PAGE_P95_MS || 600),
+  picture: Number(process.env.VIEWER_PICTURE_P95_MS || 800),
+};
+
+const userId = `latency-${randomUUID()}`;
+const sessionKey = `latency-${randomUUID()}`;
+let tabId = null;
+let failures = 0;
+
+function check(name, ok, detail = '') {
+  if (!ok) failures += 1;
+  console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? `  (${detail})` : ''}`);
+}
+
+async function call(path, { method = 'GET', body, key = ACCESS_KEY } = {}) {
+  const headers = { Accept: 'application/json' };
+  if (body) headers['Content-Type'] = 'application/json';
+  if (key) headers.Authorization = `Bearer ${key}`;
+  return fetch(`${BASE}${path}`, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+    redirect: 'manual',
+    signal: AbortSignal.timeout(30_000),
+  });
+}
+
+async function json(res) {
+  try {
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+function percentile(values, p) {
+  const sorted = [...values].sort((a, b) => a - b);
+  if (!sorted.length) return NaN;
+  return sorted[Math.min(sorted.length - 1, Math.ceil((p / 100) * sorted.length) - 1)];
+}
+
+function summary(name, values, limit) {
+  const p50 = percentile(values, 50);
+  const p95 = percentile(values, 95);
+  const ok = values.length > 0 && p95 <= limit;
+  check(`${name} within ${limit} ms at p95`, ok, `median ${Math.round(p50)} ms, p95 ${Math.round(p95)} ms, n=${values.length}`);
+}
+
+/** A local page: one text box that copies what is typed into the output line. */
+function startPage() {
+  const html = `<!doctype html><meta charset="utf-8"><title>Latency</title>
+<body style="font:24px sans-serif;margin:40px">
+<input id="box" style="font:24px sans-serif;width:70%;padding:8px" autocomplete="off">
+<pre id="out" style="font:24px monospace;margin-top:24px"></pre>
+<script>
+  document.getElementById('box').addEventListener('input', function (e) {
+    document.getElementById('out').textContent = e.target.value;
+  });
+</script></body>`;
+  return new Promise((resolveServer) => {
+    const server = createServer((req, res) => {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(html);
+    });
+    server.listen(0, '127.0.0.1', () => resolveServer(server));
+  });
+}
+
+async function evaluate(expression) {
+  const res = await call(`/tabs/${encodeURIComponent(tabId)}/evaluate`, { method: 'POST', body: { userId, expression } });
+  const data = await json(res);
+  return data?.result ?? data?.value ?? null;
+}
+
+async function viewerFrame(token) {
+  const res = await call(`/live-viewer/frame?t=${encodeURIComponent(token)}`, { key: '' });
+  if (!res.ok) return null;
+  return Buffer.from(await res.arrayBuffer());
+}
+
+async function main() {
+  check('server answers', (await call('/live-viewer/view', { key: '' })).status < 500);
+  if (!ACCESS_KEY) {
+    check('CAMOFOX_ACCESS_KEY is set in .env', false, 'the viewer needs it to issue links');
+    return;
+  }
+
+  const page = await startPage();
+  const pageUrl = `http://127.0.0.1:${page.address().port}/`;
+  try {
+    const opened = await call('/tabs', { method: 'POST', body: { userId, sessionKey, url: pageUrl } });
+    tabId = (await json(opened))?.tabId ?? null;
+    check('open the test page in a tab', opened.ok && typeof tabId === 'string', `HTTP ${opened.status}`);
+    if (!tabId) return;
+
+    await new Promise((r) => setTimeout(r, 1500));
+    const started = await call(`/tabs/${encodeURIComponent(tabId)}/handoff`, {
+      method: 'POST',
+      body: { userId, reason: 'Latency test', idleMs: 120_000 },
+    });
+    check('handoff starts', started.ok, `HTTP ${started.status}`);
+
+    const link = await call('/live-viewer/links', { method: 'POST', body: { userId, tabId, ttlSeconds: 300, control: true } });
+    const linkData = await json(link);
+    const token = linkData?.url ? new URL(linkData.url).searchParams.get('t') : null;
+    check('control link issued', Boolean(token), `HTTP ${link.status}`);
+    if (!token) return;
+
+    // Click the box through the viewer, as the person would.
+    const box = await evaluate(`(() => { const r = document.getElementById('box').getBoundingClientRect();
+      return { x: (r.x + r.width / 2) / innerWidth, y: (r.y + r.height / 2) / innerHeight }; })()`);
+    const clicked = await call(`/live-viewer/input?t=${encodeURIComponent(token)}`, { method: 'POST', body: { action: 'click', x: box.x, y: box.y }, key: '' });
+    check('the person can click the box', clicked.ok, `HTTP ${clicked.status}`);
+
+    // Frame cadence: how often a fresh picture is available to the viewer.
+    const gaps = [];
+    let last = Date.now();
+    const cadenceHashes = new Set();
+    for (let i = 0; i < 20; i += 1) {
+      const frame = await viewerFrame(token);
+      if (frame) cadenceHashes.add(createHash('sha1').update(frame).digest('hex'));
+      gaps.push(Date.now() - last);
+      last = Date.now();
+    }
+    const frameMs = gaps.slice(1);
+    const frameP95 = percentile(frameMs, 95);
+    console.log(`      frame requests: median ${Math.round(percentile(frameMs, 50))} ms, p95 ${Math.round(frameP95)} ms, distinct pictures ${cadenceHashes.size}`);
+
+    const ack = [];
+    const pageTimes = [];
+    const pictureTimes = [];
+    for (let i = 0; i < ROUNDS; i += 1) {
+      const text = `t${i}${randomUUID().slice(0, 4)}`;
+      const before = await viewerFrame(token);
+      const beforeHash = before ? createHash('sha1').update(before).digest('hex') : null;
+
+      const t0 = Date.now();
+      const typed = await call(`/live-viewer/input?t=${encodeURIComponent(token)}`, { method: 'POST', body: { action: 'type', text }, key: '' });
+      const ackMs = Date.now() - t0;
+      if (!typed.ok) {
+        check(`typing round ${i + 1} accepted`, false, `HTTP ${typed.status}`);
+        break;
+      }
+      ack.push(ackMs);
+
+      let pageMs = null;
+      let pictureMs = null;
+      while (Date.now() - t0 < 6000 && (pageMs === null || pictureMs === null)) {
+        if (pageMs === null) {
+          const value = await evaluate(`document.getElementById('out').textContent`);
+          if (value === text) pageMs = Date.now() - t0;
+        }
+        if (pictureMs === null) {
+          const frame = await viewerFrame(token);
+          if (frame && createHash('sha1').update(frame).digest('hex') !== beforeHash) pictureMs = Date.now() - t0;
+        }
+        await new Promise((r) => setTimeout(r, 15));
+      }
+      if (pageMs !== null) pageTimes.push(pageMs);
+      if (pictureMs !== null) pictureTimes.push(pictureMs);
+    }
+
+    check('every typed string reached the page', pageTimes.length === ROUNDS, `${pageTimes.length}/${ROUNDS}`);
+    summary('input acknowledged', ack, LIMITS.ack);
+    summary('text on the page', pageTimes, LIMITS.page);
+    summary('picture shows the change', pictureTimes, LIMITS.picture);
+
+    await call(`/tabs/${encodeURIComponent(tabId)}/handoff/release`, { method: 'POST', body: { userId } });
+  } finally {
+    if (tabId) await call(`/tabs/${encodeURIComponent(tabId)}?userId=${encodeURIComponent(userId)}`, { method: 'DELETE' }).catch(() => {});
+    page.close();
+  }
+}
+
+main()
+  .then(() => {
+    console.log(`\n${failures === 0 ? 'All checks passed.' : `${failures} check(s) failed.`}`);
+    process.exit(failures === 0 ? 0 : 1);
+  })
+  .catch((err) => {
+    console.error('Test stopped:', err.message);
+    process.exit(1);
+  });

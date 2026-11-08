@@ -172,7 +172,9 @@
         cache: 'no-store'
       }).then(function (res) {
         if (endedByServer(res)) return;
-        if (res.status === 409) { controlActive = false; showResumed(); render(); }
+        if (res.status === 409) { controlActive = false; showResumed(); render(); return; }
+        // The server answers once the picture shows the result, so draw it now.
+        if (res.ok) refreshFrame();
       }).catch(function () { status = 'offline'; render(); });
     });
   }
@@ -189,7 +191,7 @@
 
   function queueText(text) {
     pendingText += text;
-    if (!flushTimer) flushTimer = setTimeout(flushText, 120);
+    if (!flushTimer) flushTimer = setTimeout(flushText, 40);
   }
 
   function flushScroll() {
@@ -303,12 +305,20 @@
     }
   }
 
+  var frameSeq = 0;
+  var shownSeq = 0;
+
   async function refreshFrame() {
+    var mySeq = ++frameSeq;
     try {
       var res = await fetch('/live-viewer/frame?t=' + encodeURIComponent(token), { cache: 'no-store' });
       if (endedByServer(res)) return;
       if (res.ok) {
-        var url = URL.createObjectURL(await res.blob());
+        var blob = await res.blob();
+        // Responses can arrive out of order; never replace a newer picture with an older one.
+        if (mySeq < shownSeq) return;
+        shownSeq = mySeq;
+        var url = URL.createObjectURL(blob);
         img.src = url;
         if (previousUrl) URL.revokeObjectURL(previousUrl);
         previousUrl = url;
@@ -324,22 +334,29 @@
     render();
   }
 
-  async function loop() {
-    if (stopped) return;
-    if (!busy) {
-      busy = true;
-      try {
-        await refreshControl();
-        if (!stopped && !minimized) await refreshFrame();
-      } finally {
-        busy = false;
-      }
+  function sleep(ms) {
+    return new Promise(function (resolve) { setTimeout(resolve, ms); });
+  }
+
+  // Control state and the picture run on their own timers, so a slow frame never delays a handoff change.
+  async function controlLoop() {
+    while (!stopped) {
+      await refreshControl();
+      await sleep(status === 'closed' ? 3000 : controlActive ? 500 : 1000);
     }
-    if (!stopped) setTimeout(loop, status === 'closed' ? 3000 : controlActive ? 600 : 1000);
+  }
+
+  async function frameLoop() {
+    while (!stopped) {
+      if (!minimized && status !== 'closed') await refreshFrame();
+      else await sleep(300);
+      await sleep(status === 'closed' ? 3000 : controlActive ? 30 : 150);
+    }
   }
 
   render();
-  loop();
+  controlLoop();
+  frameLoop();
 </script>
 </body>
 </html>

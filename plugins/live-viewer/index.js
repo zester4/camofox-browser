@@ -55,6 +55,14 @@ const ACTION_TIMEOUT_MS = 5000;
 const INPUT_RATE_LIMIT_PER_SECOND = 30;
 const MAX_RATE_LIMITERS = 1000;
 
+// Frames: one capture loop per tab, shared by every viewer of that tab. Requests read the latest
+// frame from memory, so a poll never waits for a fresh screenshot to be taken.
+const FRAME_INTERVAL_MS = 100;   // pause between captures while someone is watching
+const FRAME_IDLE_MS = 10000;     // stop capturing when no viewer has asked for a frame for this long
+const FRAME_WAIT_MS = 4000;      // longest a request waits for the first frame of a tab
+const INPUT_FRAME_WAIT_MS = 800; // how long an input waits for the picture to show its result
+const FRAME_QUALITY = 70;        // JPEG quality: the picture is for reading, so it need not be lossless
+
 // Read once at startup. Edit viewer.html to change the page; no server code changes needed.
 const VIEWER_HTML = readFileSync(new URL('./viewer.html', import.meta.url), 'utf8');
 
@@ -154,8 +162,69 @@ async function pictureSize(page) {
   return page.viewportSize() || DEFAULT_VIEWPORT;
 }
 
-async function performInput(page, input) {
-  const viewport = await pictureSize(page);
+const frameStates = new Map();
+
+function frameStateFor(tabId) {
+  let state = frameStates.get(tabId);
+  if (!state) {
+    state = { buffer: null, size: null, version: 0, page: null, running: false, wanted: 0, wake: null };
+    frameStates.set(tabId, state);
+  }
+  return state;
+}
+
+const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Starts the capture loop for a tab if it is not running, and marks that a viewer wants frames. */
+function pumpFrames(tabId, page) {
+  const state = frameStateFor(tabId);
+  state.page = page;
+  state.wanted = Date.now();
+  if (state.running) return state;
+  state.running = true;
+  (async () => {
+    try {
+      while (Date.now() - state.wanted < FRAME_IDLE_MS && state.page && !state.page.isClosed()) {
+        const started = Date.now();
+        try {
+          state.size = await pictureSize(state.page);
+          state.buffer = await state.page.screenshot({ type: 'jpeg', quality: FRAME_QUALITY, fullPage: false, timeout: 5000 });
+          state.version += 1;
+        } catch {
+          // A failed capture keeps the last frame; the next pass tries again.
+        }
+        await new Promise((resolve) => {
+          const timer = setTimeout(done, Math.max(0, FRAME_INTERVAL_MS - (Date.now() - started)));
+          function done() {
+            clearTimeout(timer);
+            state.wake = null;
+            resolve();
+          }
+          state.wake = done;
+        });
+      }
+    } finally {
+      state.running = false;
+      state.wake = null;
+    }
+  })();
+  return state;
+}
+
+/** Cuts the current wait short, so the next capture happens now (used right after an input). */
+function wakeFrames(tabId) {
+  frameStates.get(tabId)?.wake?.();
+}
+
+/** Resolves once a frame newer than the current one has been captured, or after the timeout. */
+async function waitForNewFrame(tabId, timeoutMs) {
+  const state = frameStateFor(tabId);
+  const before = state.version;
+  const deadline = Date.now() + timeoutMs;
+  while (state.version === before && Date.now() < deadline) await pause(10);
+}
+
+async function performInput(page, input, viewport) {
   switch (input.action) {
     case 'click': {
       const p = toViewportPoint(input.x, input.y, viewport);
@@ -272,13 +341,14 @@ export async function register(app, ctx) {
     const page = findPage(sessions, claims.u, claims.t);
     if (!page) return res.status(404).json({ error: 'Tab not found' });
 
-    try {
-      const buffer = await page.screenshot({ type: 'png', fullPage: false, timeout: 5000 });
-      res.set({ 'Content-Type': 'image/png', 'Cache-Control': 'no-store' }).send(buffer);
-    } catch (err) {
-      log('warn', 'live-viewer screenshot failed', { error: err.message });
-      res.status(503).json({ error: 'Screenshot unavailable' });
+    const state = pumpFrames(claims.t, page);
+    const deadline = Date.now() + FRAME_WAIT_MS;
+    while (!state.buffer && Date.now() < deadline) await pause(20);
+    if (!state.buffer) {
+      log('warn', 'live-viewer screenshot unavailable', { tabId: claims.t });
+      return res.status(503).json({ error: 'Screenshot unavailable' });
     }
+    res.set({ 'Content-Type': 'image/jpeg', 'Cache-Control': 'no-store' }).send(state.buffer);
   });
 
   app.get('/live-viewer/control', (req, res) => {
@@ -313,8 +383,14 @@ export async function register(app, ctx) {
     if (!page) return res.status(404).json({ error: 'Tab not found' });
 
     try {
-      await enqueue(claims.t, () => performInput(page, input));
+      // Use the picture's size from the capture loop, so an input does not wait on an extra page call.
+      const state = pumpFrames(claims.t, page);
+      const viewport = state.size || (await pictureSize(page));
+      await enqueue(claims.t, () => performInput(page, input, viewport));
       touchHuman(claims.t);
+      // Answer once the picture shows the result, so the viewer can draw it straight away.
+      wakeFrames(claims.t);
+      await waitForNewFrame(claims.t, INPUT_FRAME_WAIT_MS);
       // Typed text is never logged; only its length is.
       log('info', 'live-viewer input', {
         userId: claims.u,
