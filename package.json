@@ -144,16 +144,16 @@
         "description": "List the cards stored for this user (brand, last4, expiry)"
       },
       {
-        "name": "agentcard_placeholder",
-        "description": "The test card to type into a checkout for a stored card (number, security code, expiry that match the card that pays)"
-      },
-      {
         "name": "agentcard_buy",
         "description": "Shop for the user at real stores through AgentCard: products, food delivery, table reservations (action reserve) and fli"
       },
       {
         "name": "agentcard_merchants",
         "description": "Check whether AgentCard can pay at a store before sending the user there"
+      },
+      {
+        "name": "agentcard_placeholder",
+        "description": "The test card to type into a checkout for a stored card (number, security code, expiry that match the card that pays)"
       },
       {
         "name": "agentcard_presets_list",
@@ -203,7 +203,6 @@
   "devDependencies": {
     "@types/node": "^22.0.0",
     "jest": "^30.4.2",
-    "openclaw": "2026.9.4",
     "pngjs": "^7.0.0",
     "typescript": "^5.7.0"
   },
