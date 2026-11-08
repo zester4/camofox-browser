@@ -197,7 +197,8 @@ async function run() {
     ['type email', { action: 'type', text: USERNAME }],
     ['click password', { action: 'click', ...pass }],
     ['type password', { action: 'type', text: PASSWORD }],
-    ['click sign in', { action: 'click', ...button }],
+    // Enter in the password field submits the form, so the test doesn't depend on where the button is.
+    ['press Enter', { action: 'key', key: 'Enter' }],
   ];
   let inputsOk = true;
   for (const [name, body] of steps) {
