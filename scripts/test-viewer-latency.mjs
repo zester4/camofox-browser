@@ -223,6 +223,13 @@ async function main() {
     summary('text on the page', pageTimes, LIMITS.page);
     summary('picture shows the change', pictureTimes, LIMITS.picture);
 
+    // Keep the tab open so the viewer link printed above can be watched (and typed into) before cleanup.
+    const hold = Number(process.env.VIEWER_HOLD_MS ?? 60_000);
+    if (hold > 0) {
+      console.log(`      holding the tab open for ${Math.round(hold / 1000)} s, so you can watch it in the viewer link`);
+      await new Promise((r) => setTimeout(r, hold));
+    }
+
     await call(`/tabs/${encodeURIComponent(tabId)}/handoff/release`, { method: 'POST', body: { userId } });
   } finally {
     if (tabId) await call(`/tabs/${encodeURIComponent(tabId)}?userId=${encodeURIComponent(userId)}`, { method: 'DELETE' }).catch(() => {});
