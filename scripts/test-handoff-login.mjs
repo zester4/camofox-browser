@@ -46,7 +46,7 @@ let tabId = null;
 let failures = 0;
 let loginSite = null;
 let siteUrl = '';
-const siteState = { loginAccepted: 0, lastCookieOk: false };
+const siteState = { loginAccepted: 0, lastCookieOk: false, attempts: [] };
 
 function check(name, ok, detail = '') {
   if (ok) console.log(`PASS  ${name}${detail ? ` (${detail})` : ''}`);
@@ -66,6 +66,13 @@ function startLoginSite() {
         let body = '';
         for await (const chunk of req) body += chunk;
         const form = new URLSearchParams(body);
+        // What the site received, without the password itself: whether each field arrived and how long it was.
+        siteState.attempts.push({
+          userMatches: form.get('user') === USERNAME,
+          userLength: (form.get('user') || '').length,
+          passMatches: form.get('pass') === PASSWORD,
+          passLength: (form.get('pass') || '').length,
+        });
         if (form.get('user') === USERNAME && form.get('pass') === PASSWORD) {
           siteState.loginAccepted += 1;
           res.writeHead(303, { location: '/account', 'set-cookie': `session=${SESSION_VALUE}; Path=/; HttpOnly` });
@@ -205,7 +212,11 @@ async function run() {
 
   // Give the site a moment to answer the sign-in.
   await new Promise((r) => setTimeout(r, 2500));
-  check('the site accepted the sign-in', siteState.loginAccepted === 1, `accepted ${siteState.loginAccepted} time(s)`);
+  const last = siteState.attempts.at(-1);
+  const detail = last
+    ? `accepted ${siteState.loginAccepted}; last form: email ${last.userMatches ? 'matched' : `did not match (length ${last.userLength})`}, password ${last.passMatches ? 'matched' : `did not match (length ${last.passLength})`}`
+    : 'the sign-in form was never submitted';
+  check('the site accepted the sign-in', siteState.loginAccepted === 1, detail);
 
   const done = await viewerPost('/live-viewer/done', link.token);
   check('the person presses Done', done.status === 200, `HTTP ${done.status}`);
