@@ -206,7 +206,11 @@ async function main() {
       let pageMs = null;
       let pictureMs = null;
       while (Date.now() - t0 < 6000 && (pageMs === null || pictureMs === null)) {
-        if (pageMs === null && page.received.has(text)) pageMs = page.received.get(text) - t0;
+        // The box keeps earlier rounds' text, so this round's text is the end of what the page received.
+        if (pageMs === null) {
+          const match = [...page.received].find(([value]) => value.endsWith(text));
+          if (match) pageMs = match[1] - t0;
+        }
         if (pictureMs === null && hash(await viewerFrame(token)) !== beforeHash) pictureMs = Date.now() - t0;
         await new Promise((r) => setTimeout(r, 15));
       }
