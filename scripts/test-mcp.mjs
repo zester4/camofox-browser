@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Self-contained smoke test for mcp/server.mjs — no Jest, no REST server.
-// Verifies: handshake completes, all 11 tools are listed with valid schemas,
+// Verifies: handshake completes, every contract tool is listed with valid schemas,
 // and an unknown tool call returns isError. Tool *execution* (which needs the
 // camofox REST server) is out of scope here.
 //
@@ -10,23 +10,13 @@
 import { spawn } from "node:child_process";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { TOOL_NAMES } from "../mcp/lib/tool-contracts.mjs";
 
 const ROOT = resolve(fileURLToPath(import.meta.url), "..", "..");
 const SERVER = process.env.CAMOFOX_MCP_SERVER || resolve(ROOT, "mcp", "server.mjs");
 
-const EXPECTED_TOOLS = [
-  "camofox_create_tab",
-  "camofox_snapshot",
-  "camofox_click",
-  "camofox_type",
-  "camofox_navigate",
-  "camofox_scroll",
-  "camofox_screenshot",
-  "camofox_close_tab",
-  "camofox_evaluate",
-  "camofox_list_tabs",
-  "camofox_import_cookies",
-];
+// The same list the server is built from, so the two cannot drift apart.
+const EXPECTED_TOOLS = TOOL_NAMES;
 
 const proc = spawn(process.execPath, [SERVER], {
   cwd: ROOT,
@@ -110,7 +100,7 @@ async function main() {
   const list = await call("tools/list", {});
   const tools = list.result.tools;
   const names = tools.map((t) => t.name).sort();
-  check("lists exactly 11 tools", tools.length === 11, `got ${tools.length}`);
+  check(`lists exactly ${EXPECTED_TOOLS.length} tools`, tools.length === EXPECTED_TOOLS.length, `got ${tools.length}`);
   check("tool names match expected", names.join(",") === [...EXPECTED_TOOLS].sort().join(","), `got: ${names.join(",")}`);
 
   for (const t of tools) {
