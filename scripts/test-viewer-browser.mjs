@@ -93,12 +93,11 @@ const HOST_PAGE = `<!doctype html><meta charset="utf-8"><title>Host</title>
 <body style="margin:0;font:16px sans-serif">
 <iframe id="viewer" style="display:block;width:960px;height:${NORMAL_HEIGHT}px;border:0"></iframe>
 <script>
-  window.__messages = [];
   document.getElementById('viewer').src = new URLSearchParams(location.search).get('src');
   window.addEventListener('message', function (e) {
     var d = e.data;
     if (!d || d.source !== 'camofox-live-viewer' || d.type !== 'resize') return;
-    window.__messages.push({ minimized: !!d.minimized, expanded: !!d.expanded });
+    navigator.sendBeacon('/resize?minimized=' + (d.minimized ? 1 : 0) + '&expanded=' + (d.expanded ? 1 : 0));
     document.getElementById('viewer').style.height =
       d.minimized ? '${MINIMIZED_HEIGHT}px' : d.expanded ? '100vh' : '${NORMAL_HEIGHT}px';
   });
@@ -120,6 +119,7 @@ async function main() {
   }
 
   const received = new Map(); // text -> time the test page received it
+  const resizes = [];         // resize messages the host page received from the viewer, in order
   let loaded = null;          // the box's position, as fractions of the window
   const local = createServer((req, res) => {
     const url = new URL(req.url, 'http://127.0.0.1');
@@ -127,6 +127,8 @@ async function main() {
       loaded = { x: Number(url.searchParams.get('x')), y: Number(url.searchParams.get('y')) };
     } else if (url.pathname === '/typed') {
       received.set(url.searchParams.get('text'), Date.now());
+    } else if (url.pathname === '/resize') {
+      resizes.push({ minimized: url.searchParams.get('minimized') === '1', expanded: url.searchParams.get('expanded') === '1' });
     }
     const html = url.pathname === '/page' ? TEST_PAGE : url.pathname === '/host' ? HOST_PAGE : null;
     if (html) {
@@ -169,8 +171,8 @@ async function main() {
     const picture = viewer.locator('#frame');
     const frameBox = () => page.locator('#viewer').boundingBox();
     const frameHeight = () => page.locator('#viewer').evaluate((el) => Math.round(el.getBoundingClientRect().height));
-    const messageCount = () => page.evaluate(() => window.__messages.length);
-    const messagesFrom = (n) => page.evaluate((from) => window.__messages.slice(from), n);
+    const messageCount = async () => resizes.length;
+    const messagesFrom = async (n) => resizes.slice(n);
     const waitForMessage = (from, test) => waitFor(async () => (await messagesFrom(from)).find(test), 3000, 50);
 
     // 1. The bar shows Done while the person holds the tab.
