@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "chuskybrowser": {
+      "command": "npx",
+      "args": ["-y", "chuskybrowser-mcp"],
+      "env": {
+        "CHUSKY_BASE_URL": "${env:CHUSKY_BASE_URL}",
+        "CHUSKY_ACCESS_KEY": "${env:CHUSKY_ACCESS_KEY}",
+        "CHUSKY_USER_ID": "${env:CHUSKY_USER_ID}"
+      }
+    }
+  }
+}

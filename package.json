@@ -1,0 +1,241 @@
+{
+  "name": "chuskybrowser",
+  "version": "1.18.4",
+  "description": "Headless browser automation server and OpenClaw plugin for AI agents - anti-detection, element refs, and session isolation",
+  "type": "module",
+  "main": "server.js",
+  "license": "MIT",
+  "author": "Seyyid Annan <seyyid236@gmail.com>",
+  "homepage": "https://github.com/zester4/chuskybrowser#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zester4/chuskybrowser.git"
+  },
+  "bugs": {
+    "url": "https://github.com/zester4/chuskybrowser/issues"
+  },
+  "keywords": [
+    "browser",
+    "automation",
+    "headless",
+    "scraping",
+    "chusky",
+    "camoufox",
+    "anti-detection",
+    "ai-agent",
+    "openclaw",
+    "clawdbot",
+    "moltbot",
+    "playwright",
+    "firefox",
+    "youtube",
+    "transcript"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "server.js",
+    "plugin.js",
+    "openclaw.plugin.json",
+    "chusky.config.json",
+    "bin/chuskybrowser.js",
+    "lib/",
+    "mcp/server.mjs",
+    "mcp/package.json",
+    "mcp/lib/config.mjs",
+    "mcp/lib/cookies.mjs",
+    "mcp/lib/tool-contracts.mjs",
+    "plugins/persistence/index.js",
+    "plugins/vnc/index.js",
+    "plugins/vnc/plugin.json",
+    "plugins/vnc/spawn.js",
+    "plugins/vnc/vnc-launcher.js",
+    "plugins/vnc/vnc-watcher.sh",
+    "plugins/vnc/vnc-watcher-lib.sh",
+    "plugins/youtube/index.js",
+    "plugins/youtube/youtube.js",
+    "postinstall.js"
+  ],
+  "openclaw": {
+    "extensions": [
+      "plugin.js"
+    ],
+    "runtimeExtensions": [
+      "plugin.js"
+    ],
+    "compat": {
+      "pluginApi": ">=2026.9.4"
+    },
+    "build": {
+      "openclawVersion": "2026.9.4"
+    },
+    "tools": [
+      {
+        "name": "chusky_create_tab",
+        "description": "Open a new browser tab at a URL"
+      },
+      {
+        "name": "chusky_snapshot",
+        "description": "Get accessibility snapshot with element refs"
+      },
+      {
+        "name": "chusky_click",
+        "description": "Click an element by ref or CSS selector"
+      },
+      {
+        "name": "chusky_type",
+        "description": "Type text into an element"
+      },
+      {
+        "name": "chusky_navigate",
+        "description": "Navigate to URL or search macro"
+      },
+      {
+        "name": "chusky_scroll",
+        "description": "Scroll page up/down/left/right"
+      },
+      {
+        "name": "chusky_screenshot",
+        "description": "Capture page screenshot"
+      },
+      {
+        "name": "chusky_close_tab",
+        "description": "Close a browser tab"
+      },
+      {
+        "name": "chusky_evaluate",
+        "description": "Execute JavaScript in a Camoufox tab page context"
+      },
+      {
+        "name": "chusky_list_tabs",
+        "description": "List open tabs for a user"
+      },
+      {
+        "name": "chusky_import_cookies",
+        "description": "Import Netscape cookie file (requires CHUSKY_API_KEY)"
+      },
+      {
+        "name": "chusky_handoff_start",
+        "description": "Hand a tab to the human for a login, a CAPTCHA or a check"
+      },
+      {
+        "name": "chusky_handoff_release",
+        "description": "Return control of a tab to the agent after a handoff."
+      },
+      {
+        "name": "chusky_pay_arm",
+        "description": "Pay on this tab with the user's own card"
+      },
+      {
+        "name": "chusky_pay_status",
+        "description": "Read a payment attachment"
+      },
+      {
+        "name": "chusky_pay_disarm",
+        "description": "Stop paying on a tab"
+      },
+      {
+        "name": "agentcard_enrol",
+        "description": "Start storing the user's card with AgentCard"
+      },
+      {
+        "name": "agentcard_cards",
+        "description": "List the cards stored for this user (brand, last4, expiry)"
+      },
+      {
+        "name": "agentcard_buy",
+        "description": "Shop for the user at real stores through AgentCard: products, food delivery, table reservations (action reserve) and fli"
+      },
+      {
+        "name": "agentcard_merchants",
+        "description": "Check whether AgentCard can pay at a store before sending the user there"
+      },
+      {
+        "name": "agentcard_placeholder",
+        "description": "The test card to type into a checkout for a stored card (number, security code, expiry that match the card that pays)"
+      },
+      {
+        "name": "agentcard_presets_list",
+        "description": "List this user's spending rules (presets)"
+      },
+      {
+        "name": "agentcard_preset_set",
+        "description": "Create or change one of the user's spending rules"
+      },
+      {
+        "name": "agentcard_preset_attach",
+        "description": "Attach one of the user's spending rules to one of their cards (default: the first card)."
+      }
+    ]
+  },
+  "scripts": {
+    "build": "node -e \"require('fs').mkdirSync('dist',{recursive:true});require('fs').copyFileSync('plugin.js','dist/plugin.js')\"",
+    "prepublishOnly": "npm run build",
+    "start": "node server.js",
+    "mcp": "node mcp/server.mjs",
+    "test:mcp": "npm ci --prefix mcp && node scripts/test-mcp.mjs && node scripts/test-mcp-package.mjs",
+    "test:unit": "NODE_OPTIONS='--experimental-vm-modules' jest --runInBand --forceExit tests/unit",
+    "test": "npm run test:unit && npm run test:e2e && npm run test:plugins",
+    "test:e2e": "NODE_OPTIONS='--experimental-vm-modules' jest --config jest.config.e2e.cjs --runInBand --forceExit",
+    "test:plugins": "NODE_OPTIONS='--experimental-vm-modules' jest --forceExit plugins/",
+    "test:live": "RUN_LIVE_TESTS=1 NODE_OPTIONS='--experimental-vm-modules' jest --runInBand --forceExit tests/live",
+    "test:debug": "DEBUG_SERVER=1 NODE_OPTIONS='--experimental-vm-modules' jest --runInBand --forceExit",
+    "generate-openapi": "node scripts/generate-openapi.js",
+    "version:sync": "node scripts/sync-version.js",
+    "version": "node scripts/sync-version.js && node scripts/generate-openapi.js && git add openclaw.plugin.json mcp/package.json mcp/package-lock.json openapi.json",
+    "postinstall": "node postinstall.js",
+    "fetch-bin": "node lib/camoufox-download.js"
+  },
+  "dependencies": {
+    "@agent-cards/commerce-sdk": "0.20.0",
+    "@agent-cards/sdk": "0.24.1",
+    "better-sqlite3": "13.0.1",
+    "camoufox-js": "0.11.5",
+    "express": "^5.2.1",
+    "playwright-core": "1.58.2",
+    "prom-client": "^15.1.3",
+    "swagger-jsdoc": "^6.2.8"
+  },
+  "optionalDependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "jest": "^30.4.2",
+    "pngjs": "^7.0.0",
+    "typescript": "^5.7.0"
+  },
+  "overrides": {
+    "@jest/reporters": {
+      "glob": "13.0.6"
+    },
+    "babel-plugin-istanbul": {
+      "test-exclude": "8.0.0"
+    },
+    "jest-config": {
+      "glob": "13.0.6"
+    },
+    "jest-runtime": {
+      "glob": "13.0.6"
+    },
+    "swagger-jsdoc": {
+      "glob": "13.0.6"
+    },
+    "qs": "6.16.0",
+    "fast-uri": "3.1.8",
+    "hono": "4.13.7"
+  },
+  "bin": {
+    "chuskybrowser": "./bin/chuskybrowser.js",
+    "chuskybrowser-mcp": "./mcp/server.mjs"
+  },
+  "peerDependencies": {
+    "openclaw": ">=2026.9.4"
+  },
+  "peerDependenciesMeta": {
+    "openclaw": {
+      "optional": true
+    }
+  }
+}

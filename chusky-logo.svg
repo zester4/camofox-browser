@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="chuskybrowser">
+  <defs>
+    <linearGradient id="veil" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7dd3fc" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#6366f1" stop-opacity="0.35"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="56" fill="#0f172a"/>
+  <path d="M40 72 Q128 40 216 72 L216 196 Q128 164 40 196 Z" fill="url(#veil)"/>
+  <path d="M40 72 Q128 40 216 72" fill="none" stroke="#e0f2fe" stroke-width="6" stroke-linecap="round" opacity="0.7"/>
+  <path d="M96 150 L96 96 L140 124 L120 128 L132 152 L122 157 L110 133 Z" fill="#ffffff" stroke="#0f172a" stroke-width="4" stroke-linejoin="round"/>
+</svg>

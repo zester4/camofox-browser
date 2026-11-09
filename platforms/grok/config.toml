@@ -1,0 +1,6 @@
+# Add to ~/.grok/config.toml
+[mcp_servers.chuskybrowser]
+command = "npx"
+args = ["-y", "chuskybrowser-mcp"]
+# ${CHUSKY_ACCESS_KEY} is read from your environment when the config loads.
+env = { CHUSKY_PORT = "9377", CHUSKY_ACCESS_KEY = "${CHUSKY_ACCESS_KEY}" }

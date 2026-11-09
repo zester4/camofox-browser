@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "chuskybrowser": {
+      "command": "npx",
+      "args": ["-y", "chuskybrowser-mcp"],
+      "env": {
+        "CHUSKY_PORT": "9377",
+        "CHUSKY_ACCESS_KEY": "${CHUSKY_ACCESS_KEY}"
+      }
+    }
+  }
+}
