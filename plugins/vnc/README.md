@@ -1,6 +1,6 @@
 # VNC Plugin
 
-> Originally contributed by [@leoneparise](https://github.com/leoneparise) in [PR #65](https://github.com/jo-inc/camofox-browser/pull/65). Reworked as a plugin for the chusky extension system.
+> Originally contributed by [@leoneparise](https://github.com/leoneparise) in [PR #65](https://github.com/zester4/chuskybrowser/pull/65). Reworked as a plugin for the chusky extension system.
 
 Interactive browser access via VNC. Log into sites visually, solve CAPTCHAs, approve OAuth prompts — then export the authenticated storage state for reuse by your agent.
 

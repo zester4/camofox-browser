@@ -4,9 +4,9 @@
   <p><strong>Anti-detection browser server for AI agents, powered by Camoufox</strong></p>
   <p>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" /></a>
-    <a href="https://github.com/jo-inc/camofox-browser/stargazers"><img src="https://img.shields.io/github/stars/jo-inc/camofox-browser" alt="GitHub stars" /></a>
+    <a href="https://github.com/zester4/chuskybrowser/stargazers"><img src="https://img.shields.io/github/stars/jo-inc/camofox-browser" alt="GitHub stars" /></a>
     <a href="https://www.npmjs.com/package/chuskybrowser"><img src="https://img.shields.io/npm/v/chuskybrowser" alt="npm version" /></a>
-    <a href="https://github.com/jo-inc/camofox-browser/commits"><img src="https://img.shields.io/github/last-commit/jo-inc/camofox-browser" alt="GitHub last commit" /></a>
+    <a href="https://github.com/zester4/chuskybrowser/commits"><img src="https://img.shields.io/github/last-commit/jo-inc/camofox-browser" alt="GitHub last commit" /></a>
   </p>
   <p>
     Standing on the mighty shoulders of <a href="https://camoufox.com">Camoufox</a> - a Firefox fork with fingerprint spoofing at the C++ level.
@@ -28,7 +28,7 @@
 <br/>
 
 ```bash
-git clone https://github.com/jo-inc/camofox-browser && cd camofox-browser
+git clone https://github.com/zester4/chuskybrowser && cd chuskybrowser
 npm install && npm start
 # -> http://localhost:9377
 ```
@@ -96,8 +96,8 @@ npx chuskybrowser
 Or from source:
 
 ```bash
-git clone https://github.com/jo-inc/camofox-browser
-cd camofox-browser
+git clone https://github.com/zester4/chuskybrowser
+cd chuskybrowser
 npm install
 npm start  # downloads Camoufox on first run (~300MB)
 ```
@@ -430,11 +430,11 @@ curl https://camofox-telemetry.askjo.workers.dev/source
 sha256sum workers/crash-reporter/index.ts
 
 # 3. Check the commit matches what CI deployed
-#    https://github.com/jo-inc/camofox-browser/actions/workflows/telemetry-deploy.yml
+#    https://github.com/zester4/chuskybrowser/actions/workflows/telemetry-deploy.yml
 git log --oneline workers/crash-reporter/index.ts | head -1
 ```
 
-If the hashes don't match, the endpoint is running different code than what's in the repo. The deploy workflow ([`.github/workflows/telemetry-deploy.yml`](.github/workflows/telemetry-deploy.yml)) injects the commit and source hash at deploy time -- every deploy is auditable in [GitHub Actions](https://github.com/jo-inc/camofox-browser/actions/workflows/telemetry-deploy.yml).
+If the hashes don't match, the endpoint is running different code than what's in the repo. The deploy workflow ([`.github/workflows/telemetry-deploy.yml`](.github/workflows/telemetry-deploy.yml)) injects the commit and source hash at deploy time -- every deploy is auditable in [GitHub Actions](https://github.com/zester4/chuskybrowser/actions/workflows/telemetry-deploy.yml).
 
 Or skip verification entirely: `CHUSKY_CRASH_REPORT_ENABLED=false` disables all telemetry, or point to [your own endpoint](#self-hosted-telemetry-endpoint) with `CHUSKY_CRASH_REPORT_URL`.
 
@@ -464,7 +464,7 @@ export CHUSKY_CRASH_REPORT_RATE_LIMIT=5
 
 #### Self-hosted telemetry endpoint
 
-To file telemetry reports in your own GitHub repo instead of `jo-inc/camofox-browser`:
+To file telemetry reports in your own GitHub repo instead of `jo-inc/chuskybrowser`:
 
 1. **Create a GitHub App** -- [Settings -> Developer settings -> GitHub Apps -> New](https://github.com/settings/apps/new)
    - Permissions: **Repository -> Issues -> Read & Write**
@@ -672,7 +672,7 @@ Browser behavior can be tuned in `chusky.config.json`:
 | `TAB_INACTIVITY_MS` | Close tabs idle longer than this | `300000` (5min) |
 | `CHUSKY_CRASH_REPORT_ENABLED` | Enable anonymized crash/hang telemetry (`false` to disable) | `true` |
 | `CHUSKY_CRASH_REPORT_URL` | Telemetry endpoint ([self-hosted endpoint](#self-hosted-telemetry-endpoint)) | `https://camofox-telemetry.askjo.workers.dev/report` |
-| `CHUSKY_CRASH_REPORT_REPO` | GitHub repo for telemetry issues | `jo-inc/camofox-browser` |
+| `CHUSKY_CRASH_REPORT_REPO` | GitHub repo for telemetry issues | `jo-inc/chuskybrowser` |
 | `CHUSKY_CRASH_REPORT_RATE_LIMIT` | Max telemetry reports per hour | `10` |
 | `ENABLE_VNC` | Enable VNC plugin for interactive browser access (`1`) | - |
 | `VNC_PASSWORD` | Password for VNC access (recommended in production) | - |

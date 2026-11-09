@@ -37,7 +37,7 @@ The plugin registers the `virtualDisplay` capability for its own `plugins.vnc` s
 
 ## Original Contributors
 
-- [@leoneparise](https://github.com/leoneparise) — original VNC implementation + keyboard mode ([PR #65](https://github.com/jo-inc/camofox-browser/pull/65), [PR #66](https://github.com/jo-inc/camofox-browser/pull/66))
+- [@leoneparise](https://github.com/leoneparise) — original VNC implementation + keyboard mode ([PR #65](https://github.com/zester4/chuskybrowser/pull/65), [PR #66](https://github.com/zester4/chuskybrowser/pull/66))
 - [@pradeepe](https://github.com/pradeepe) — plugin system integration, code separation refactor, security hardening
 
 For PRs touching this plugin, tag the contributors above for review.

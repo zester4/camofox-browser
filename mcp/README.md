@@ -22,7 +22,7 @@ Registering the MCP server does **not** require being inside the chuskybrowser c
 Clone the repo and start the server (one-time binary download on first run):
 
 ```bash
-git clone https://github.com/jo-inc/camofox-browser && cd camofox-browser
+git clone https://github.com/zester4/chuskybrowser && cd chuskybrowser
 npm install   # downloads Camoufox (~300MB) on first run
 npm start     # → http://localhost:9377
 ```
@@ -35,7 +35,7 @@ The MCP server is the same for every host — what differs is only the config fi
 
 ```bash
 # Option A — npm link (if you have the source checkout; picks up local edits)
-cd camofox-browser && npm link
+cd chuskybrowser && npm link
 
 # Option B — global install (no source checkout needed)
 npm install -g chuskybrowser
@@ -48,7 +48,7 @@ npx -y chuskybrowser-mcp
 #   Skips camoufox-js/playwright-core/express and the browser binary download —
 #   use this if a chuskybrowser REST server is already running (locally or
 #   remotely) and you only need the stdio adapter.
-git clone https://github.com/jo-inc/camofox-browser && cd camofox-browser/mcp
+git clone https://github.com/zester4/chuskybrowser && cd chuskybrowser/mcp
 npm install   # installs only @modelcontextprotocol/sdk (~24MB, no postinstall)
 npm link      # chuskybrowser-mcp now resolves from any directory
 ```
@@ -155,7 +155,7 @@ For the other hosts, add the same keys to the `env` / `environment` field of tha
 
 ```bash
 # Replace `chuskybrowser-mcp` with `node /absolute/path/to/mcp/server.mjs`
-claude mcp add chuskybrowser -- node /Users/you/src/camofox-browser/mcp/server.mjs
+claude mcp add chuskybrowser -- node /Users/you/src/chuskybrowser/mcp/server.mjs
 ```
 
 > ⚠️ Always prefer the `chuskybrowser-mcp` bin (options A/B/C/D above). The `node ./mcp/server.mjs` form is **path-dependent** — relative paths break outside the checkout.
