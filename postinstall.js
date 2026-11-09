@@ -32,7 +32,7 @@ function warn(message) {
 
 function fail(message) {
   warn(message);
-  warn('The Camoufox browser binary may not have been downloaded.');
+  warn('The chuskybrowser engine may not have been downloaded.');
   warn('Run `npm run fetch-bin` manually before starting the server.');
   process.exit(0);
 }
@@ -46,14 +46,14 @@ export function externalExecutableFromEnv(env = process.env) {
 }
 
 function assertExternalExecutable(path) {
-  if (!existsSync(path)) fail(`external Camoufox executable does not exist: ${path}`);
+  if (!existsSync(path)) fail(`external browser engine executable does not exist: ${path}`);
   const stat = statSync(path);
-  if (!stat.isFile()) fail(`external Camoufox executable is not a file: ${path}`);
+  if (!stat.isFile()) fail(`external browser engine executable is not a file: ${path}`);
   if (platform() !== 'win32') {
     try {
       accessSync(path, constants.X_OK);
     } catch {
-      fail(`external Camoufox executable is not executable: ${path}`);
+      fail(`external browser engine executable is not executable: ${path}`);
     }
   }
 }
@@ -68,7 +68,7 @@ export async function main() {
   if (externalExecutable) {
     assertExternalExecutable(externalExecutable.value);
     process.stdout.write(
-      `[chuskybrowser] postinstall: ${externalExecutable.name} is set; skipping bundled Camoufox download.\n`
+      `[chuskybrowser] postinstall: ${externalExecutable.name} is set; skipping bundled engine download.\n`
     );
     return;
   }
@@ -82,10 +82,10 @@ export async function main() {
   try {
     await downloadBundledCamoufox();
   } catch (error) {
-    fail(`failed to download Camoufox: ${error instanceof Error ? error.message : String(error)}`);
+    fail(`failed to download the chuskybrowser engine: ${error instanceof Error ? error.message : String(error)}`);
   }
   if (!existsSync(versionFile)) {
-    warn('Camoufox cache not populated after fetch.');
+    warn('chuskybrowser engine cache not populated after fetch.');
     warn(`  Expected file: ${versionFile}`);
     warn('  Manual fix: npm run fetch-bin');
   }
