@@ -75,7 +75,7 @@ export async function main() {
 
   const versionFile = join(camoufoxCacheDir(), 'version.json');
   if (existsSync(versionFile)) {
-    process.stdout.write('[chuskybrowser] postinstall: Camoufox binary already cached.\n');
+    process.stdout.write('[chuskybrowser] postinstall: chuskybrowser engine already downloaded.\n');
     return;
   }
 
