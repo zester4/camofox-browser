@@ -33,8 +33,8 @@ IndexedDB persistence is opt-in (`"indexedDB": true` in the persistence plugin c
 
 ## Original Contributors
 
-- [@company8](https://github.com/company8) — original persistence concept ([PR #62](https://github.com/jo-inc/camofox-browser/pull/62))
-- [@eddieoz](https://github.com/eddieoz) — cookie auto-load on startup ([PR #55](https://github.com/jo-inc/camofox-browser/pull/55))
+- [@company8](https://github.com/company8) — original persistence concept ([PR #62](https://github.com/zester4/chuskybrowser/pull/62))
+- [@eddieoz](https://github.com/eddieoz) — cookie auto-load on startup ([PR #55](https://github.com/zester4/chuskybrowser/pull/55))
 - [@pradeepe](https://github.com/pradeepe) — plugin system integration, atomic writes, inflight coalescing
 
 For PRs touching this plugin, tag the contributors above for review.

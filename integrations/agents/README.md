@@ -14,7 +14,7 @@ Keep the key out of shared files. Put the three values in the agent's environmen
 **Publishing:** the npm package must be published from this repo's `mcp/` folder
 (version with the 23 tools) before `npx -y chuskybrowser-mcp` serves the new
 tools. Until then, point the command at the repo copy:
-`node /path/to/camofox-browser/mcp/server.mjs` (run `npm install` in `mcp/` first).
+`node /path/to/chuskybrowser/mcp/server.mjs` (run `npm install` in `mcp/` first).
 
 ## Status by platform
 
