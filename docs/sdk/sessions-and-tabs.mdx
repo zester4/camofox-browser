@@ -1,0 +1,69 @@
+---
+title: Sessions and tabs
+description: Open, navigate, check and close tabs, and end a user's session.
+---
+
+A **tab** is one page your agent works in. A **session** is everything one user has open: their tabs, cookies and storage.
+
+## Check the server
+
+```js
+const health = await browser.health();
+```
+
+Use this to confirm the server is up before you start a task.
+
+## Open a tab
+
+```js
+const { tabId } = await browser.openTab({
+  url: 'https://example.com',
+  sessionKey: 'order-1187',
+  trace: false,
+});
+```
+
+| Field | Required | Meaning |
+|---|---|---|
+| `url` | No | The page to open first. |
+| `sessionKey` | Yes | Groups the tabs of one task. Use a unique value per task, such as an order or a job ID. |
+| `trace` | No | Turns on recording for the whole session: screenshots, page snapshots and network activity. |
+
+**Set `trace` when the session is first created.** You cannot turn it on later for a session that already exists. If you need traces, decide before the first tab is opened.
+
+The call returns the `tabId` you use for every other call on that tab.
+
+## Navigate
+
+```js
+await browser.navigate(tabId, { url: 'https://example.com/pricing' });
+
+// Or use a search macro:
+await browser.navigate(tabId, { macro: '@google_search', query: 'running shoes' });
+```
+
+Navigating clears the element references. Take a new snapshot before you click or type again.
+
+Available macros: `@google_search`, `@youtube_search`, `@amazon_search`, `@reddit_search`, `@wikipedia_search`, `@twitter_search`, `@yelp_search`, `@linkedin_search`.
+
+## Check a tab's state
+
+```js
+const state = await browser.state(tabId);
+```
+
+Returns the current page's details, including whether a person has taken control of the tab.
+
+## Close a tab
+
+```js
+await browser.closeTab(tabId);
+```
+
+## End a user's session
+
+```js
+await browser.endSession();
+```
+
+This closes all of the user's tabs and removes their session data. Use it when the user signs out or deletes their account. The next call for that user starts a fresh session.

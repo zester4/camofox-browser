@@ -1,0 +1,29 @@
+---
+title: chuskybrowser SDK
+description: A small client for giving your AI agent a real browser, one isolated session per user.
+---
+
+The chuskybrowser SDK is a small JavaScript client for the chuskybrowser server. Your product creates a browser tab for each of its users, your agent reads and acts on the page, and a person can step in whenever a login or a check needs them.
+
+## What you can do
+
+- **Open and read pages.** Each page comes back as an accessibility snapshot with numbered element references.
+- **Act on the page.** Click, type and navigate using those references, or CSS selectors when you prefer them.
+- **Extract data.** Pull prices, tables and listings as JSON, or describe the fields you want with a schema.
+- **Hand over to a person.** Pause the agent for a login or a CAPTCHA, and give the user a link to take control.
+- **Keep users apart.** Every call is scoped to a user ID, so one user's cookies and tabs are never visible to another.
+
+## How it fits together
+
+1. Your backend knows which user is making the request.
+2. It creates a client for that user with `forUser(userId)`.
+3. The client calls the chuskybrowser server with your access key.
+4. Your agent works in a tab, and a person can take over when needed.
+
+The SDK never sends the access key to a browser. Keep your calls on the server.
+
+## Read next
+
+- [Quickstart](/docs/quickstart): run your first session in a few minutes.
+- [Client and configuration](/docs/client): settings and the `forUser` helper.
+- [Errors](/docs/errors): what to do when a call fails.

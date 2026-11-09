@@ -1,0 +1,57 @@
+---
+title: Reading and acting on pages
+description: Read a page as a snapshot, then click and type using the element references.
+---
+
+## Read a page
+
+```js
+const page = await browser.snapshot(tabId);
+```
+
+The snapshot describes the page as a tree of what is on it: headings, paragraphs, links, buttons and form fields. Each interactive element has a short reference, such as `e1` or `e2`:
+
+```
+[heading] Example Domain
+[paragraph] This domain is for use in examples.
+[link e1] More information...
+[textbox e2] Search
+[button e3] Search
+```
+
+Your agent reads this text, decides what to do, and then acts on a reference.
+
+## Element references
+
+- A reference is only valid for the snapshot it came from.
+- **Navigating, or a page change that reloads content, clears the references.** Take a new snapshot before the next action.
+- If an action fails because a reference is no longer valid, take a new snapshot and try again.
+
+## Click
+
+```js
+await browser.click(tabId, { ref: 'e1' });
+
+// Or with a CSS selector, when you have one:
+await browser.click(tabId, { selector: 'button.submit' });
+```
+
+## Type
+
+```js
+await browser.type(tabId, { ref: 'e2', text: 'running shoes' });
+
+// Press Enter after typing:
+await browser.type(tabId, { ref: 'e2', text: 'running shoes', pressEnter: true });
+```
+
+`type` adds text to the field. Give it the field's reference, or a selector if you don't have a reference.
+
+## Use selectors sparingly
+
+References come from the page as it is now, so they adapt when a site changes its layout. CSS selectors break when a site changes its markup. Use a selector when you know the element will stay the same and a reference is not available.
+
+## Read the page in a different way
+
+- To pick out specific fields, use [extraction](/docs/extracting-data) instead of parsing the snapshot.
+- For a rendered image of the page, use the screenshot option on the REST API (see [more actions](/docs/more-actions)).

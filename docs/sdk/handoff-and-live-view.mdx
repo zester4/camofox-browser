@@ -1,0 +1,58 @@
+---
+title: Handing over to a person
+description: Pause the agent for a login or a check, let a person take control, then hand the tab back.
+---
+
+Some steps need a person: a login, a CAPTCHA, a confirmation. Hand the tab over, and the agent waits until the person gives control back.
+
+## Hand over a tab
+
+```js
+await browser.startHandoff(tabId, {
+  reason: 'Please sign in to your bank',
+  idleMs: 120000,
+});
+```
+
+| Field | Required | Meaning |
+|---|---|---|
+| `reason` | Yes | Shown to the person, so they know what to do. Be specific. |
+| `idleMs` | No | How long the tab can sit idle before control returns to the agent automatically. |
+
+While a person holds the tab, the agent cannot act on it. Any action the agent attempts returns a `409` error with the code `human_in_control`. Do not try to work around it. Wait for the person, or stop and tell your user.
+
+## Give the person a link
+
+```js
+const link = await browser.controlLink(tabId);
+```
+
+Send `link` to the user only. It opens the live view, where they can see the page and click and type in it.
+
+**The link only works during a handoff.** If there is no active handoff, the server refuses it with a `409` error. Call `startHandoff` first.
+
+Links expire. The default lifetime is one hour. Set a shorter one when the task is quick:
+
+```js
+const link = await browser.controlLink(tabId, { ttlSeconds: 600 });
+```
+
+## Hand the tab back
+
+```js
+await browser.release(tabId);
+```
+
+Call this when the person has finished. The agent can then continue on the tab. If `idleMs` ran out before the person finished, control has already returned to the agent.
+
+## Let the agent check for you
+
+```js
+await browser.checkpoint(tabId);
+```
+
+Checkpoint looks at the page for something that needs a person. If it finds one, it hands the tab over and tells you so in the response. Use it at the points in a task where a login or a check is likely.
+
+## Watch without control
+
+If you want the user to follow along without touching anything, create a view-only link from the REST API. See [more actions](/docs/more-actions#watch-a-session-live).

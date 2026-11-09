@@ -1,0 +1,54 @@
+---
+title: Extracting data
+description: Pull prices, tables and listings as JSON, or describe the fields you want with a schema.
+---
+
+Extraction turns a page into structured data your product can use directly, without your agent parsing text.
+
+## Extract by kind
+
+```js
+const data = await browser.extract(tabId, {
+  kinds: ['prices', 'tables'],
+});
+```
+
+The kinds you can ask for:
+
+| Kind | What you get |
+|---|---|
+| `prices` | Prices found on the page |
+| `tables` | Tables, as rows and columns |
+| `json_ld` | Structured data the site has published about itself |
+| `listings` | Repeated items, such as search results or products |
+
+Leave `kinds` out to get all of them.
+
+## Extract with a schema
+
+Use a schema when you know exactly which fields you need:
+
+```js
+const order = await browser.extract(tabId, {
+  schema: {
+    type: 'object',
+    properties: {
+      total: { type: 'string' },
+      deliveryDate: { type: 'string' },
+    },
+  },
+});
+```
+
+The schema is a standard JSON Schema object. Describe each field and its type, and the result comes back in that shape.
+
+**A schema needs a snapshot first.** Call `snapshot` on the tab before you extract with a schema, so the server has read the current page.
+
+## Use one or the other
+
+Pass `kinds` or `schema` in a call, never both. The SDK rejects a call that passes both.
+
+## When extraction comes back empty
+
+- Take a fresh snapshot first. The page may have changed since you last read it.
+- Check that the content is on the page you think it is. Some sites load content after a click or a scroll. Use [more actions](/docs/more-actions) to wait for an element, or scroll, before you extract.

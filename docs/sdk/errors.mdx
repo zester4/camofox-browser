@@ -1,0 +1,43 @@
+---
+title: Errors
+description: What a failed call looks like, and what to do about each kind of error.
+---
+
+When a call fails, the SDK throws a `ChuskyError`. It carries the HTTP status, the error code when the server gives one, and the response body.
+
+```js
+import { ChuskyError } from './chusky-client.mjs';
+
+try {
+  await browser.click(tabId, { ref: 'e1' });
+} catch (err) {
+  if (err instanceof ChuskyError) {
+    console.error(err.status, err.code, err.message);
+  } else {
+    throw err;
+  }
+}
+```
+
+## Status codes
+
+| Status | What it usually means | What to do |
+|---|---|---|
+| `400` | A required field is missing or wrong. | Check the call against the field tables in these docs. |
+| `401` | The access key is missing or wrong. | Check `CHUSKY_ACCESS_KEY` on your backend and on the server. They must match. |
+| `403` | Access is refused for this request. | Check that the access key and the `userId` are the ones you were issued. |
+| `404` | The tab or session doesn't exist. It may have closed or expired. | Open a new tab. |
+| `409` | Another party is in control, or the action doesn't fit the current state. | If the code is `human_in_control`, wait for the person to release the tab, or stop and tell your user. Do not try to work around it. |
+| `500` | Something went wrong on the server. | Retry once. If it keeps failing, check the server logs. |
+
+## Codes
+
+- **`human_in_control`**: a person has taken over the tab. The agent cannot act on it until the person releases it or the handoff times out.
+
+## Refs that stopped working
+
+If an action fails because an element reference no longer exists, the page probably changed. Take a new snapshot and try again.
+
+## Retries
+
+Retry only errors that can succeed later: a `500`, or a timeout. Don't retry a `401`, a `400` or a `409` without changing something first.

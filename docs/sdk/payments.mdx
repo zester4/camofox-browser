@@ -1,0 +1,64 @@
+---
+title: Payments
+description: Let an agent buy on a user's behalf, with the user approving each purchase on their own device.
+---
+
+Payments use the user's own card. The agent never sees the card number. Each purchase is approved by the user on their device with a passkey.
+
+The SDK does not yet have payment methods, so these calls use the REST API directly. Send them from your backend with the access key in the `Authorization` header.
+
+## 1. Arm payment on the checkout page
+
+```
+POST /agentcard/tabs/{tabId}/payment
+```
+
+```json
+{
+  "userId": "customer-42",
+  "merchant": "Shop Example",
+  "amount": 2306,
+  "currency": "usd",
+  "checkoutOrigin": "https://shop.example.com"
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `merchant` | The store's name. The user sees it on the approval screen. Up to 120 characters. |
+| `amount` | The most the user can be charged, in the smallest unit of the currency. `2306` means $23.06. |
+| `currency` | A lowercase three-letter code, such as `usd`. |
+| `checkoutOrigin` | The address of the checkout page, starting with `https://`. |
+| `cardId` | Optional. Which stored card to use. If you leave it out, the first card is used. |
+
+The response includes an `attachmentId`. Keep it for the next steps.
+
+Once armed, the checkout's card request waits for the user's approval instead of going through.
+
+## 2. Send the user the approval link
+
+```
+GET /agentcard/tabs/{tabId}/payment/{attachmentId}?userId=customer-42
+```
+
+Once the card request is paused, the response includes an `approvalUrl`. Send it to the user unchanged. They open it on their device and approve with their passkey.
+
+The `phase` field tells you where things stand:
+
+- `idle`: payment is armed, nothing is waiting yet.
+- `pending`: the card request is paused, waiting for approval.
+- `completed`: the purchase went through.
+
+## 3. Cancel payment
+
+```
+DELETE /agentcard/tabs/{tabId}/payment/{attachmentId}?userId=customer-42
+```
+
+Use this if the user decides not to buy, or the task is cancelled.
+
+## Rules for your agent
+
+- Never ask the user for a card number, and never type one into a page.
+- Send the approval link to the user exactly as returned. Do not open it yourself.
+- Use the amount the user agreed to. Do not raise it.

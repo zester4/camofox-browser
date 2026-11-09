@@ -1,0 +1,46 @@
+---
+title: Client and configuration
+description: How to create a client for a user, and which settings it reads.
+---
+
+## Create a client for a user
+
+```js
+import { forUser } from './chusky-client.mjs';
+
+const browser = forUser('customer-42');
+```
+
+`forUser` returns a client that is bound to one user. Every call it makes is scoped to that user ID.
+
+**Always take the user ID from your own authenticated session.** Never take it from text a user types, from a page, or from an agent's output. Each user's cookies, storage and tabs are separate, so a wrong ID would give one user another user's browser.
+
+You can also create the client directly, which lets you pass settings explicitly:
+
+```js
+import { ChuskyClient } from './chusky-client.mjs';
+
+const browser = new ChuskyClient({
+  baseUrl: 'https://browser.yourcompany.com',
+  accessKey: process.env.CHUSKY_ACCESS_KEY,
+  userId: 'customer-42',
+});
+```
+
+## Settings
+
+| Setting | Where it comes from | Required | Notes |
+|---|---|---|---|
+| `baseUrl` | `CHUSKY_BASE_URL` | Yes | The server address, for example `http://localhost:9377`. A trailing slash is removed. |
+| `accessKey` | `CHUSKY_ACCESS_KEY` | Yes | The shared secret the server checks on every call. |
+| `userId` | Your session | Yes | Must be a non-empty string. |
+
+Values passed to the constructor take priority over `.env`, and `.env` takes priority over any value that is only set in the shell. If a required setting is missing, the constructor throws an error that names it.
+
+## Timeouts
+
+Each request waits up to 60 seconds before it fails. Browser actions on slow pages can take a while, so keep this in mind when you design your agent's steps.
+
+## Keep the key on the server
+
+The access key gives full control of every user's browser. Call the SDK from your backend only. Never put the key in browser code, mobile apps, or any file you commit.

@@ -1,0 +1,35 @@
+---
+title: REST API reference
+description: The full list of routes and their fields, generated from the server.
+---
+
+Every route the SDK uses is also a plain HTTP route. The complete, generated reference is served by the server:
+
+- **Interactive reference:** `/docs` on your server, for example `http://localhost:9377/docs`.
+- **Machine-readable spec:** `/openapi.json`, for generating clients in any language.
+
+## Authentication
+
+Every route that changes state or reads a user's data needs the access key:
+
+```
+Authorization: Bearer <CHUSKY_ACCESS_KEY>
+```
+
+Health checks don't need it.
+
+## Common fields
+
+- **`userId`**: required on almost every route. It scopes the call to one user.
+- **`sessionKey`**: groups the tabs of one task when you open a tab.
+- **Tab IDs** are in the path, for example `/tabs/{tabId}/click`.
+
+## Where to find things
+
+- Tabs, navigation and actions: `/tabs`, `/tabs/{tabId}/...`
+- Reading pages: `/tabs/{tabId}/snapshot`, `/tabs/{tabId}/state`, `/tabs/{tabId}/extract`
+- People in the loop: `/tabs/{tabId}/handoff`, `/tabs/{tabId}/checkpoint`, `/live-viewer/links`
+- Payments: `/agentcard/tabs/{tabId}/payment`
+- Traces and downloads: `/sessions/{userId}/traces`, `/tabs/{tabId}/downloads`
+
+For what each action does and when to use it, read the SDK pages in this section first. The REST reference is the place to check exact field names.

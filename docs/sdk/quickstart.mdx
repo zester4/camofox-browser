@@ -1,0 +1,52 @@
+---
+title: Quickstart
+description: Start the server, add the client, and run your first browser session.
+---
+
+## 1. Start the server
+
+You need Node.js 22 or newer. Then, in an empty folder:
+
+```bash
+npx chuskybrowser doctor          # checks your setup
+npx chuskybrowser fetch-engine    # downloads the browser engine (about 300 MB, first time only)
+npx chuskybrowser                 # starts the server on http://localhost:9377
+```
+
+## 2. Add the client to your project
+
+Copy the client file from the chuskybrowser repository into your project. It is one file with no dependencies, and it reads its settings from `.env`:
+
+```
+CHUSKY_BASE_URL=http://localhost:9377
+CHUSKY_ACCESS_KEY=your-access-key
+```
+
+Set `CHUSKY_ACCESS_KEY` on the server too. The client and the server must use the same key.
+
+## 3. Run a session
+
+```js
+import { forUser } from './chusky-client.mjs';
+
+// The user ID comes from your own authenticated session.
+const browser = forUser('customer-42');
+
+const { tabId } = await browser.openTab({
+  url: 'https://example.com',
+  sessionKey: 'task-1',
+});
+
+const page = await browser.snapshot(tabId);
+console.log(page);
+
+await browser.closeTab(tabId);
+```
+
+Run it with `node example.mjs` while the server is running.
+
+## Next steps
+
+- [Reading and acting on pages](/docs/reading-and-acting)
+- [Extracting data](/docs/extracting-data)
+- [Handing over to a person](/docs/handoff-and-live-view)

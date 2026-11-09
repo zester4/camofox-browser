@@ -1,0 +1,105 @@
+---
+title: More actions
+description: Routes the SDK doesn't wrap yet: selecting options, uploading files, waiting, resizing, closing pop-ups, downloads, traces and view-only links.
+---
+
+The SDK covers the core actions. These routes are on the REST API. Send them from your backend with the access key in the `Authorization` header, and include the `userId` in every request.
+
+All routes are described in the [REST API reference](/docs/rest-api).
+
+## Choose an option in a dropdown
+
+```
+POST /tabs/{tabId}/select
+```
+
+```json
+{ "userId": "customer-42", "ref": "e4", "option": "Large" }
+```
+
+Give the dropdown by `ref` or `selector`, and the option by its text or value.
+
+## Upload a file
+
+```
+POST /tabs/{tabId}/upload
+```
+
+```json
+{ "userId": "customer-42", "ref": "e7", "path": "invoice.pdf" }
+```
+
+The file must already be in the server's uploads folder. The server accepts files from that folder only, so an agent cannot use this route to read other files on the server. Give the file's name or its path inside that folder.
+
+## Wait for content
+
+```
+POST /tabs/{tabId}/wait
+```
+
+```json
+{ "userId": "customer-42", "selector": ".results", "timeout": 10000 }
+```
+
+Use this after an action that loads new content. `timeout` is in milliseconds.
+
+## Set the page size
+
+```
+POST /tabs/{tabId}/viewport
+```
+
+```json
+{ "userId": "customer-42", "width": 390, "height": 844 }
+```
+
+Useful for checking how a page looks on a phone.
+
+## Close pop-ups and overlays
+
+```
+POST /tabs/{tabId}/overlays/dismiss
+```
+
+```json
+{ "userId": "customer-42", "maxClicks": 5 }
+```
+
+Closes cookie banners and pop-ups that cover the page. `maxClicks` limits how many close or accept clicks it makes.
+
+## Read the page state
+
+```
+GET /tabs/{tabId}/state?userId=customer-42
+```
+
+Returns the current page's details, including whether a person has control of the tab. The SDK exposes this as `state(tabId)`.
+
+## List downloads
+
+```
+GET /tabs/{tabId}/downloads?userId=customer-42
+```
+
+Lists the files downloaded in a tab.
+
+## Traces
+
+```
+GET /sessions/{userId}/traces
+GET /sessions/{userId}/traces/{filename}
+```
+
+Lists the trace files recorded for a user, and downloads one. Traces are only recorded for sessions opened with `trace: true`. See [sessions and tabs](/docs/sessions-and-tabs).
+
+## Watch a session live
+
+```
+POST /live-viewer/links
+```
+
+```json
+{ "userId": "customer-42", "tabId": "t_123", "control": false, "ttlSeconds": 900 }
+```
+
+Returns a `url`. Send it to the user. With `control` set to `false`, the user can watch the tab but cannot click or type. For a link that lets them take over, see [handing over to a person](/docs/handoff-and-live-view).
