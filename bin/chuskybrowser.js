@@ -3,7 +3,7 @@ const command = process.argv[2];
 
 if (command === 'fetch-engine') {
   const { downloadBundledCamoufox } = await import('../lib/camoufox-download.js');
-  console.log('Downloading the browser engine (about 300 MB, first time only)...');
+  console.log('Downloading the chuskybrowser engine (about 300 MB, first time only)...');
   await downloadBundledCamoufox();
   console.log('Browser engine ready. Check with: npx chuskybrowser doctor');
 } else if (command === 'doctor') {
