@@ -31,7 +31,7 @@ try {
   const bin = join(installDir, 'node_modules', '.bin', 'chuskybrowser-mcp');
   await access(bin);
 
-  const server = join(installDir, 'node_modules', '@askjo', 'chuskybrowser-mcp', 'server.mjs');
+  const server = join(installDir, 'node_modules', 'chuskybrowser-mcp', 'server.mjs');
   await execFile(process.execPath, [join(ROOT, 'scripts', 'test-mcp.mjs')], {
     cwd: ROOT,
     env: {
