@@ -267,3 +267,19 @@ describe('index pages', () => {
     expect(all.pages.map((p) => p.url)).toContain('https://site.com/3/genindex.html');
   });
 });
+
+describe('parts join exactly, with no line broken', () => {
+  test('a line cut at a part boundary is joined back together', async () => {
+    const original = 'first line\nhttps://github.com/python/cpython/issues/142390\nlast line';
+    const cut = 30;
+    const api = {
+      snapshot: async (_t, { offset }) => {
+        const piece = original.slice(offset, offset + cut);
+        const more = offset + cut < original.length;
+        return { url: 'u', snapshot: piece + (more ? `\n[... truncated at char ${offset + cut} of ${original.length} ...]\nCall snapshot with offset=${offset + cut} to see more` : ''), hasMore: more, nextOffset: offset + cut };
+      },
+    };
+    const r = await readFullSnapshot(api, 'T');
+    expect(r.snapshot).toBe(original);
+  });
+});
