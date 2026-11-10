@@ -83,7 +83,7 @@ describe('classify', () => {
 describe('checkSite', () => {
   test('opens, reads, closes the tab, and reports a loaded site', async () => {
     const client = mockClient({ 'nike.com': LONG });
-    const r = await checkSite(client, 'nike.com');
+    const r = await checkSite(client, 'nike.com', { settleMs: 0, retryMs: 0 });
     expect(r.status).toBe('loaded');
     expect(r.url).toBe('https://nike.com');
     expect(client.opened[0].sessionKey).toBe('coverage-nike.com');
@@ -92,7 +92,7 @@ describe('checkSite', () => {
 
   test('a site that errors on open is recorded as error and still does not throw', async () => {
     const client = mockClient({ 'bad.com': new Error('Chusky POST /tabs failed (HTTP 500)') });
-    const r = await checkSite(client, 'bad.com');
+    const r = await checkSite(client, 'bad.com', { settleMs: 0, retryMs: 0 });
     expect(r.status).toBe('error');
     expect(r.reason).toMatch(/HTTP 500/);
     expect(client.closed).toEqual([]);
@@ -100,7 +100,7 @@ describe('checkSite', () => {
 
   test('a page that never answers is recorded as timeout', async () => {
     const client = mockClient({ 'slow.com': 'hang' });
-    const r = await checkSite(client, 'slow.com', { timeoutMs: 20 });
+    const r = await checkSite(client, 'slow.com', { timeoutMs: 20, settleMs: 0, retryMs: 0 });
     expect(r.status).toBe('timeout');
   });
 });
@@ -140,8 +140,49 @@ describe('summarize and toCsv', () => {
   test('CSV quotes cells with commas and quotes', () => {
     const csv = toCsv(results);
     const lines = csv.trim().split('\n');
-    expect(lines[0]).toBe('site,status,chars,ms,finalUrl,reason,checkedAt');
+    expect(lines[0]).toBe('site,status,chars,attempts,ms,finalUrl,reason,checkedAt');
     expect(lines[3]).toContain('"timed out, slow"');
     expect(lines[2]).toContain('block page text matched /access denied/i,x');
+  });
+});
+
+describe('checkSite retry and labels', () => {
+  function scripted(snapshots) {
+    const calls = { snapshot: 0, closed: 0 };
+    return {
+      calls,
+      async openTab() { return { tabId: 'T' }; },
+      async snapshot() { const v = snapshots[Math.min(calls.snapshot, snapshots.length - 1)]; calls.snapshot++; return { url: 'https://x.com/', snapshot: v }; },
+      async closeTab() { calls.closed++; },
+    };
+  }
+
+  test('a placeholder first read is retried, and the longer read wins', async () => {
+    const client = scripted(['Loading', LONG]);
+    const r = await checkSite(client, 'x.com', { settleMs: 0, retryMs: 0 });
+    expect(client.calls.snapshot).toBe(2);
+    expect(r.attempts).toBe(2);
+    expect(r.status).toBe('loaded');
+  });
+
+  test('a page that is loaded on the first read is not retried', async () => {
+    const client = scripted([LONG]);
+    const r = await checkSite(client, 'x.com', { settleMs: 0, retryMs: 0 });
+    expect(client.calls.snapshot).toBe(1);
+    expect(r.attempts).toBe(1);
+  });
+
+  test('a thin page with the eBay template length is labelled template', async () => {
+    const text = 'x'.repeat(262);
+    const client = scripted([text]);
+    const r = await checkSite(client, 'ebay.com', { settleMs: 0, retryMs: 0 });
+    expect(r.status).toBe('template');
+    expect(r.reason).toMatch(/eBay/);
+  });
+
+  test('a thin page with no known length stays thin', async () => {
+    const client = scripted(['Hello']);
+    const r = await checkSite(client, 'x.com', { settleMs: 0, retryMs: 0 });
+    expect(r.status).toBe('thin');
   });
 });
