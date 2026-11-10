@@ -4,6 +4,7 @@
 //   node scripts/crawl.mjs https://example.com
 //   node scripts/crawl.mjs https://docs.example.com --max-pages 50 --max-depth 3
 //   node scripts/crawl.mjs https://example.com --no-robots --out ./crawl-out
+//   node scripts/crawl.mjs https://docs.python.org/3/ --path-prefix /3/
 //
 // Needs CHUSKY_BASE_URL and CHUSKY_ACCESS_KEY (from .env or the environment).
 // Writes into --out (default ./crawl-results/<timestamp>/):
@@ -21,7 +22,7 @@ import { crawlSite, toLlmDocument, DEFAULTS } from '../lib/crawl.js';
 const ENV = { ...loadDotEnv(), ...process.env };
 
 function parseArgs(argv) {
-  const opts = { url: null, maxPages: DEFAULTS.maxPages, maxDepth: DEFAULTS.maxDepth, respectRobots: true, sameHostOnly: true, out: null };
+  const opts = { url: null, maxPages: DEFAULTS.maxPages, maxDepth: DEFAULTS.maxDepth, respectRobots: true, sameHostOnly: true, pathPrefix: null, out: null };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     const next = () => {
@@ -34,10 +35,11 @@ function parseArgs(argv) {
       case '--max-depth': opts.maxDepth = Number(next()); break;
       case '--no-robots': opts.respectRobots = false; break;
       case '--any-host': opts.sameHostOnly = false; break;
+      case '--path-prefix': opts.pathPrefix = next(); break;
       case '--out': opts.out = path.resolve(next()); break;
       case '-h':
       case '--help':
-        console.log('Usage: node scripts/crawl.mjs <url> [--max-pages N] [--max-depth N] [--any-host] [--no-robots] [--out DIR]');
+        console.log('Usage: node scripts/crawl.mjs <url> [--max-pages N] [--max-depth N] [--path-prefix /folder/] [--any-host] [--no-robots] [--out DIR]');
         process.exit(0);
         break;
       default:
@@ -91,6 +93,7 @@ async function main() {
     maxDepth: opts.maxDepth,
     respectRobots: opts.respectRobots,
     sameHostOnly: opts.sameHostOnly,
+    pathPrefix: opts.pathPrefix,
     sessionKey: runId,
   });
   await client.endSession().catch(() => {});

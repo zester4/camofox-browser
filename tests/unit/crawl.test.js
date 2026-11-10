@@ -151,3 +151,54 @@ describe('crawlSite', () => {
     expect(doc.indexOf('# Page A')).toBeGreaterThan(doc.indexOf('## Pages'));
   });
 });
+
+import { folderOf, fixMojibake } from '../../lib/crawl.js';
+
+describe('staying in the start folder', () => {
+  test('folderOf gives the start URL folder', () => {
+    expect(folderOf('https://docs.python.org/3/')).toBe('/3/');
+    expect(folderOf('https://docs.python.org/3/download.html')).toBe('/3/');
+    expect(folderOf('https://example.com')).toBe('/');
+  });
+
+  test('a crawl from /3/ does not follow links into other versions', async () => {
+    const site3 = {
+      'https://site.com/3/': { snapshot: `- text "${longText}"`, links: ['/3/a', '/2.7/', '/'] },
+      'https://site.com/3/a': { snapshot: `- text "${longText}"`, links: ['/3/'] },
+    };
+    const r = await crawlSite(mockApi(site3, ''), 'https://site.com/3/', { maxPages: 10, maxDepth: 3, respectRobots: false });
+    expect(r.pages.map((p) => p.url)).toEqual(['https://site.com/3/', 'https://site.com/3/a']);
+    expect(r.options.pathPrefix).toBe('/3/');
+  });
+});
+
+describe('navigation is left out of the markdown', () => {
+  test('navigation, banner and footer blocks are dropped, content kept', () => {
+    const snap = [
+      '- banner "Site"',
+      '  - link "Logo" [e1]',
+      '- navigation "Main"',
+      '  - link "Home" [e2]',
+      '  - link "Versions" [e3]',
+      '- heading "Tutorial"',
+      '- text "Actual content."',
+      '- contentinfo "Footer"',
+      '  - link "Copyright" [e4]',
+    ].join('\n');
+    const md = snapshotToMarkdown(snap);
+    expect(md).toContain('## Tutorial');
+    expect(md).toContain('Actual content.');
+    expect(md).not.toMatch(/Home|Versions|Logo|Copyright/);
+  });
+});
+
+describe('garbled characters', () => {
+  test('UTF-8 read as Windows-1252 is repaired', () => {
+    expect(fixMojibake('Python Developerâ€™s Guide')).toBe('Python Developer’s Guide');
+    expect(fixMojibake('cafÃ©')).toBe('café');
+  });
+
+  test('normal text is left alone', () => {
+    expect(fixMojibake('Plain text with ünïcode already fine')).toBe('Plain text with ünïcode already fine');
+  });
+});
