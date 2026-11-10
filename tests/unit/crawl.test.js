@@ -202,3 +202,22 @@ describe('garbled characters', () => {
     expect(fixMojibake('Plain text with ünïcode already fine')).toBe('Plain text with ünïcode already fine');
   });
 });
+
+import { removeRepeatedLines } from '../../lib/crawl.js';
+
+describe('repeated menus and footers', () => {
+  test('lines that appear on most pages are removed; page content stays', () => {
+    const page = (n) => ({ url: `https://s.com/${n}`, title: `P${n}`, depth: 1, chars: 0, markdown: `## Page ${n}\n\n- Home\n- Downloads\n- Copyright\n\nThe body of page ${n}.\n` });
+    const out = removeRepeatedLines([page(1), page(2), page(3), page(4)]);
+    for (const p of out) {
+      expect(p.markdown).not.toMatch(/- Home|- Copyright/);
+      expect(p.markdown).toMatch(/The body of page/);
+      expect(p.markdown).toMatch(/## Page/);
+    }
+  });
+
+  test('two pages are too few to decide what is boilerplate', () => {
+    const pages = [{ markdown: '- Home\nA', chars: 0 }, { markdown: '- Home\nB', chars: 0 }];
+    expect(removeRepeatedLines(pages)[0].markdown).toContain('- Home');
+  });
+});
