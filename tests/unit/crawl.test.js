@@ -221,3 +221,49 @@ describe('repeated menus and footers', () => {
     expect(removeRepeatedLines(pages)[0].markdown).toContain('- Home');
   });
 });
+
+import { readFullSnapshot, INDEX_PAGE } from '../../lib/crawl.js';
+
+describe('long pages are read in parts', () => {
+  test('reads every part until hasMore is false and drops truncation notes', async () => {
+    const parts = [
+      { url: 'https://s.com/long', snapshot: 'part one\n[... truncated at char 9 of 20 ...]\nCall snapshot with offset=9 to see more', hasMore: true, nextOffset: 9 },
+      { url: 'https://s.com/long', snapshot: 'part two', hasMore: false },
+    ];
+    const seen = [];
+    const api = { snapshot: async (_t, { offset }) => { seen.push(offset); return parts[seen.length - 1]; } };
+    const r = await readFullSnapshot(api, 'T');
+    expect(seen).toEqual([0, 9]);
+    expect(r.snapshot).toContain('part one');
+    expect(r.snapshot).toContain('part two');
+    expect(r.snapshot).not.toMatch(/truncated at char|Call snapshot/);
+  });
+
+  test('a page with no hasMore is read once', async () => {
+    const api = { snapshot: async () => ({ url: 'u', snapshot: 'short' }) };
+    expect((await readFullSnapshot(api, 'T')).snapshot).toBe('short');
+  });
+});
+
+describe('index pages', () => {
+  test('genindex, py-modindex and search pages are recognised', () => {
+    expect(INDEX_PAGE.test('/3/genindex.html')).toBe(true);
+    expect(INDEX_PAGE.test('/3/py-modindex.html')).toBe(true);
+    expect(INDEX_PAGE.test('/3/search.html')).toBe(true);
+    expect(INDEX_PAGE.test('/3/whatsnew/3.15.html')).toBe(false);
+  });
+
+  test('a crawl skips index pages by default and keeps them with includeIndexes', async () => {
+    const site2 = {
+      'https://site.com/3/': { snapshot: `- text "${longText}"`, links: ['/3/genindex.html', '/3/a'] },
+      'https://site.com/3/a': { snapshot: `- text "${longText}"`, links: [] },
+      'https://site.com/3/genindex.html': { snapshot: `- text "${longText}"`, links: [] },
+    };
+    const def = await crawlSite(mockApi(site2, ''), 'https://site.com/3/', { maxPages: 10, maxDepth: 2, respectRobots: false });
+    expect(def.pages.map((p) => p.url)).toEqual(['https://site.com/3/', 'https://site.com/3/a']);
+    expect(def.skipped.some((s) => /index page/.test(s.reason))).toBe(true);
+
+    const all = await crawlSite(mockApi(site2, ''), 'https://site.com/3/', { maxPages: 10, maxDepth: 2, respectRobots: false, includeIndexes: true });
+    expect(all.pages.map((p) => p.url)).toContain('https://site.com/3/genindex.html');
+  });
+});

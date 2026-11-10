@@ -22,7 +22,7 @@ import { crawlSite, toLlmDocument, DEFAULTS } from '../lib/crawl.js';
 const ENV = { ...loadDotEnv(), ...process.env };
 
 function parseArgs(argv) {
-  const opts = { url: null, maxPages: DEFAULTS.maxPages, maxDepth: DEFAULTS.maxDepth, respectRobots: true, sameHostOnly: true, pathPrefix: null, out: null };
+  const opts = { includeIndexes: false, url: null, maxPages: DEFAULTS.maxPages, maxDepth: DEFAULTS.maxDepth, respectRobots: true, sameHostOnly: true, pathPrefix: null, out: null };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     const next = () => {
@@ -35,11 +35,12 @@ function parseArgs(argv) {
       case '--max-depth': opts.maxDepth = Number(next()); break;
       case '--no-robots': opts.respectRobots = false; break;
       case '--any-host': opts.sameHostOnly = false; break;
+      case '--include-indexes': opts.includeIndexes = true; break;
       case '--path-prefix': opts.pathPrefix = next(); break;
       case '--out': opts.out = path.resolve(next()); break;
       case '-h':
       case '--help':
-        console.log('Usage: node scripts/crawl.mjs <url> [--max-pages N] [--max-depth N] [--path-prefix /folder/] [--any-host] [--no-robots] [--out DIR]');
+        console.log('Usage: node scripts/crawl.mjs <url> [--max-pages N] [--max-depth N] [--path-prefix /folder/] [--any-host] [--include-indexes] [--no-robots] [--out DIR]');
         process.exit(0);
         break;
       default:
@@ -58,7 +59,14 @@ function makeApi(client, baseUrl, accessKey, userId) {
   return {
     openTab: (args) => client.openTab(args),
     navigate: (tabId, args) => client.navigate(tabId, args),
-    snapshot: (tabId) => client.snapshot(tabId),
+    async snapshot(tabId, { offset = 0 } = {}) {
+      const url = new URL(`${baseUrl}/tabs/${encodeURIComponent(tabId)}/snapshot`);
+      url.searchParams.set('userId', userId);
+      if (offset) url.searchParams.set('offset', String(offset));
+      const res = await fetch(url, { headers, signal: AbortSignal.timeout(60000) });
+      if (!res.ok) throw new Error(`snapshot failed (HTTP ${res.status})`);
+      return res.json();
+    },
     closeTab: (tabId) => client.closeTab(tabId),
     async links(tabId, { offset, limit }) {
       const url = new URL(`${baseUrl}/tabs/${encodeURIComponent(tabId)}/links`);
@@ -93,6 +101,7 @@ async function main() {
     maxDepth: opts.maxDepth,
     respectRobots: opts.respectRobots,
     sameHostOnly: opts.sameHostOnly,
+    includeIndexes: opts.includeIndexes,
     pathPrefix: opts.pathPrefix,
     sessionKey: runId,
   });
