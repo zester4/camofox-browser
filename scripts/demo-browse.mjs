@@ -71,15 +71,23 @@ async function main() {
   console.log(link + '\n');
   await sleep(opts.pause);
 
-  const first = await client.snapshot(tabId);
-  const candidates = pickContentLinks(first.snapshot);
-  if (candidates.length === 0) throw new Error('No content links found on the start page.');
-  console.log(`Found ${candidates.length} links to choose from. Visiting ${Math.min(opts.steps, candidates.length)}.\n`);
+  let visited = 0;
+  for (let step = 0; step < opts.steps; step++) {
+    // Read the start page fresh each time, so element references are current.
+    const startPage = await client.snapshot(tabId);
+    const candidates = pickContentLinks(startPage.snapshot);
+    if (candidates.length === 0) { console.log('No more content links on the start page.'); break; }
+    const pick = candidates[step] || candidates[candidates.length - 1];
+    if (step >= candidates.length) { console.log('Ran out of links to visit.'); break; }
 
-  for (let step = 0; step < Math.min(opts.steps, candidates.length); step++) {
-    const pick = candidates[step];
     console.log(`Step ${step + 1}: clicking "${pick.text}"`);
-    await client.click(tabId, { ref: pick.ref });
+    try {
+      await client.click(tabId, { ref: pick.ref });
+    } catch (err) {
+      console.log(`  could not click it (${String(err.message).slice(0, 120)}), skipping`);
+      continue;
+    }
+    visited++;
     await sleep(opts.pause);
 
     const page = await client.snapshot(tabId);
@@ -88,12 +96,11 @@ async function main() {
     console.log(`  reading: ${words}\n`);
     await sleep(opts.pause);
 
-    if (step < Math.min(opts.steps, candidates.length) - 1) {
-      console.log('  going back to the start page');
-      await client.navigate(tabId, { url: opts.url, sessionKey });
-      await sleep(opts.pause);
-    }
+    console.log('  going back to the start page');
+    await client.navigate(tabId, { url: opts.url, sessionKey });
+    await sleep(opts.pause);
   }
+  console.log(`Visited ${visited} page(s).`);
 
   await client.closeTab(tabId).catch(() => {});
   await client.endSession().catch(() => {});
